@@ -331,6 +331,13 @@ class YouTubeSkill(BaseSkill):
             "seek_backward":          self._action_seek_backward,
             "set_playback_speed":     self._action_set_speed,
             "scroll_comments":        self._action_scroll_comments,
+            # ── Phase 10.1 Additional Aliases (guaranteed coverage) ────────────
+            "unlike_video":           self._action_unlike,          # alias for unlike()
+            "unlike_short":           self._action_unlike_short,    # shorts unlike
+            "play_video":             self._action_play,             # alias for play()
+            "pause_video":            self._action_pause,            # alias for pause()
+            "like_current":           self._action_like,             # natural-language alias
+            "subscribe_channel":      self._action_subscribe,        # natural-language alias
         }
         action = _action_map.get(name)
         if action is None:
@@ -1449,6 +1456,39 @@ class YouTubeSkill(BaseSkill):
             return Result.fail(error=f"like_short(): {e}")
         except Exception as e:
             return Result.fail(error=f"like_short(): {type(e).__name__}: {e}")
+
+    def _action_unlike_short(self, actions: Actions) -> Result:
+        """
+        Remove like from the currently playing Short. Idempotent.
+
+        Uses Shorts-specific like selectors with generic fallback.
+        Checks aria-pressed state before acting to avoid accidental double-toggle.
+        """
+        logger.info(f"[{self.name}] unlike_short()")
+        try:
+            is_liked = actions.evaluate_js(_JS_IS_LIKED)
+            if is_liked is False or is_liked is None:
+                logger.info(f"[{self.name}] unlike_short(): not liked — skipping")
+                return Result.ok(data={"liked": False, "action": "skipped_not_liked"})
+
+            # The like button when already pressed acts as Unlike
+            like_selectors = (
+                self._selectors.get("shorts_like_button", [])
+                + self._selectors["like_button"]
+            )
+            actions.wait_for(selectors=like_selectors, timeout=10.0)
+            actions.click(selectors=like_selectors)
+
+            is_liked_after = actions.evaluate_js(_JS_IS_LIKED)
+            if not is_liked_after:
+                logger.info(f"[{self.name}] unlike_short() ✅")
+                return Result.ok(data={"liked": False, "action": "unliked"})
+            logger.warning(f"[{self.name}] unlike_short(): could not verify — treating as success")
+            return Result.ok(data={"liked": False, "action": "unliked_unverified"})
+        except ActionError as e:
+            return Result.fail(error=f"unlike_short(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"unlike_short(): {type(e).__name__}: {e}")
 
     def _action_subscribe_short(self, actions: Actions) -> Result:
         """

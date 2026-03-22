@@ -86,10 +86,13 @@
 
   "_comment_engagement": "Engagement buttons: like, subscribe, save.",
   "like_button": [
+    "ytd-like-button-renderer button[aria-pressed]",
     "ytd-like-button-renderer button[aria-label]",
     "#top-level-buttons-computed ytd-like-button-renderer button",
     "ytd-segmented-like-dislike-button-renderer ytd-like-button-renderer button",
-    "button[aria-label='Like']"
+    "#segmented-like-button button",
+    "button[aria-label='Like']",
+    "button[aria-label*='like' i]"
   ],
   "unlike_button": [
     "button[aria-label='Unlike']",
@@ -101,7 +104,10 @@
     "#subscribe-button button",
     "yt-subscribe-button-view-model button",
     "ytd-subscribe-button-renderer button",
-    "button[aria-label*='Subscribe']"
+    "button[aria-label*='Subscribe']",
+    "button[aria-label*='Abonnieren']",
+    "button[aria-label*='S\u2019abonner']",
+    "ytd-watch-metadata yt-subscribe-button-view-model button"
   ],
   "subscribed_indicator": [
     "button[aria-label*='Unsubscribe']",
@@ -178,8 +184,12 @@
   "autoplay_toggle": [
     ".ytp-autonav-toggle-button",
     "button.ytp-autonav-toggle-button",
+    "button[aria-label*='Autoplay']",
+    "button[aria-label*='autoplay' i]",
     "ytd-compact-autoplay-renderer #toggleButton",
-    "[data-ytac-toggle-enabled]"
+    "ytd-compact-autoplay-renderer button",
+    "[data-ytac-toggle-enabled]",
+    ".ytd-compact-autoplay-renderer button"
   ],
 
   "_comment_navigation": "Navigation buttons and links.",

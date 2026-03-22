@@ -426,11 +426,16 @@ class Actions:
         will simply run on whatever tab Chrome considers focused.
 
         Called at the top of: click(), type_text(), get_text(), scroll(),
-        navigate(), wait_for().
+        navigate(), wait_for(), evaluate_js(), get_all_hrefs().
         """
         try:
             self._page.bring_to_front()
-            logger.debug("[tab_focus] bring_to_front() ✓")
+            # Log the current tab URL — makes multi-tab debugging explicit.
+            try:
+                url = self._page.url or "unknown"
+            except Exception:
+                url = "unknown"
+            logger.debug(f"[tab_focus] bring_to_front() ✓ | url={url[:80]}")
         except Exception as exc:
             logger.debug(f"[tab_focus] bring_to_front() failed (non-fatal): {exc}")
 
@@ -582,14 +587,24 @@ class Actions:
                 try:
                     self._page.click(selector, timeout=int(config.DEFAULT_TIMEOUT * 1000))
                 except Exception as exc:
-                    # JS click fallback: if Playwright click fails (covered by overlay,
-                    # pointer-events:none, etc.), use JS .click() which bypasses CSS.
-                    logger.debug(
-                        f"[click] Human click failed ('{selector}'), trying JS fallback: {exc}"
-                    )
-                    self._page.evaluate(
-                        f"document.querySelector({selector!r})?.click()"
-                    )
+                    # Step 2: force click — bypasses actionability checks.
+                    try:
+                        logger.debug(
+                            f"[click] Human click failed ('{selector}'), trying force click: {exc}"
+                        )
+                        self._page.click(
+                            selector,
+                            force=True,
+                            timeout=int(config.DEFAULT_TIMEOUT * 1000),
+                        )
+                    except Exception as exc2:
+                        # Step 3: JS .click() fallback.
+                        logger.debug(
+                            f"[click] Force click failed ('{selector}'), trying JS fallback: {exc2}"
+                        )
+                        self._page.evaluate(
+                            f"document.querySelector({selector!r})?.click()"
+                        )
 
             self._try_selector("click", selectors, _click_human)
         else:
@@ -613,18 +628,31 @@ class Actions:
                 try:
                     self._page.click(selector, timeout=int(config.DEFAULT_TIMEOUT * 1000))
                 except Exception as exc:
-                    # JS click fallback: handles pointer-events:none, overlays,
-                    # and elements that Playwright considers "not clickable".
-                    logger.debug(
-                        f"[click] Fast click failed ('{selector}'), trying JS fallback: "
-                        f"{type(exc).__name__}: {exc}"
-                    )
-                    result = self._page.evaluate(
-                        f"() => {{ const el = document.querySelector({selector!r}); "
-                        f"if (el) {{ el.click(); return true; }} return false; }}"
-                    )
-                    if not result:
-                        raise  # JS couldn't find it either — let _try_selector handle
+                    # Step 2: force click — bypasses Playwright actionability checks
+                    # (pointer-events:none, element covered, not in viewport).
+                    try:
+                        logger.debug(
+                            f"[click] Normal click failed ('{selector}'), trying force click: "
+                            f"{type(exc).__name__}: {exc}"
+                        )
+                        self._page.click(
+                            selector,
+                            force=True,
+                            timeout=int(config.DEFAULT_TIMEOUT * 1000),
+                        )
+                    except Exception as exc2:
+                        # Step 3: JS .click() — final fallback, works even on
+                        # elements blocked by overlays or pointer-events:none.
+                        logger.debug(
+                            f"[click] Force click failed ('{selector}'), trying JS fallback: "
+                            f"{type(exc2).__name__}: {exc2}"
+                        )
+                        result = self._page.evaluate(
+                            f"() => {{ const el = document.querySelector({selector!r}); "
+                            f"if (el) {{ el.click(); return true; }} return false; }}"
+                        )
+                        if not result:
+                            raise exc  # original exception — let _try_selector handle
 
             self._try_selector("click", selectors, _click_fast)
 
@@ -713,6 +741,9 @@ class Actions:
         Returns:
             The selector string that won the race.
         """
+        # TAB FOCUS GUARANTEE + interrupt check before waiting.
+        self._ensure_tab_focus()
+        self._handle_interrupts()
         t = timeout if timeout is not None else config.DEFAULT_TIMEOUT
         logger.info(f"[wait_for] Warte auf Selektoren: {selectors} (timeout={t}s)")
 
@@ -926,6 +957,9 @@ class Actions:
         Raises:
             ActionError: if no selector yields any results with non-empty hrefs.
         """
+        # TAB FOCUS GUARANTEE + interrupt check before DOM traversal.
+        self._ensure_tab_focus()
+        self._handle_interrupts()
         logger.info(f"[get_all_hrefs] Selektoren: {selectors} (limit={limit})")
 
         for selector in selectors:
@@ -1015,6 +1049,13 @@ class Actions:
             new_page.wait_for_load_state("domcontentloaded")
             wait_for_page_ready(new_page)
 
+            # Run interrupt handler on the new tab — it may immediately show
+            # a cookie consent, YouTube consent bump, or modal overlay.
+            try:
+                self._interrupts.handle(new_page)
+            except Exception as ih_exc:
+                logger.debug(f"[open_new_tab] interrupt handler on new tab: {ih_exc}")
+
             logger.info(
                 f"[open_new_tab] ✓ Tab geöffnet (background): {new_page.url} | "
                 f"Titel: '{new_page.title()[:60]}'"
@@ -1063,6 +1104,18 @@ class Actions:
             ActionError: if the JS evaluation throws an exception.
         """
         target = page if page is not None else self._page
+        # TAB FOCUS GUARANTEE: bring target tab to front before JS execution.
+        # If an explicit page was given, bring that one to front instead.
+        try:
+            target.bring_to_front()
+        except Exception:
+            pass  # non-fatal
+        # Run interrupt handler on the target page before JS execution.
+        # This ensures ads/popups are cleared even in JS-only flows.
+        try:
+            self._interrupts.handle(target)
+        except Exception:
+            pass  # non-fatal
         logger.debug(f"[evaluate_js] Script: {script[:120]!r}")
         try:
             result = target.evaluate(script)

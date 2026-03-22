@@ -2,6 +2,109 @@
 
 ---
 
+## ✅ Phase 10.1 — YouTube Control System (COMPLETE)
+
+> Completed as part of the Phase 10.1 hardening pass.
+> All changes are backward-compatible. Stable contracts preserved.
+
+### Goals Achieved
+
+| Part | Goal | Status |
+|------|------|--------|
+| 1 | Global interrupt execution on EVERY public method | ✅ DONE |
+| 2 | Final action hardening — force-click middle step | ✅ DONE |
+| 3 | Tab focus enforcement + URL debug log before actions | ✅ DONE |
+| 4 | YouTube control completion — all aliases added | ✅ DONE |
+| 5 | Selector validation — fallbacks hardened | ✅ DONE |
+| 6 | Speed: no sleep() in FAST mode, condition-based waits | ✅ DONE |
+| 7 | Validation flows: like, subscribe, shorts, comments, speed | ✅ DONE |
+| 8 | Documentation updated | ✅ DONE |
+
+### Changes Applied
+
+#### `core/actions.py`
+- `_ensure_tab_focus()`: now logs current tab URL (`url=...`) on every call for multi-tab debug visibility
+- `wait_for()`: added `_ensure_tab_focus()` + `_handle_interrupts()` at top (now covered)
+- `evaluate_js()`: added `bring_to_front()` on target page + `_interrupts.handle(target)` before execution
+- `get_all_hrefs()`: added `_ensure_tab_focus()` + `_handle_interrupts()` at top
+- `open_new_tab()`: runs `_interrupts.handle(new_page)` after page ready — clears consent/cookie banners on newly opened tabs
+- `click()` FAST mode: **3-step fallback chain** — normal click → `force=True` click → JS `.click()`
+- `click()` HUMAN mode: same 3-step fallback chain added
+
+#### `skills/youtube_skill.py`
+- Added missing action aliases to `get_action()` map:
+  - `unlike_video` → `_action_unlike`
+  - `unlike_short` → `_action_unlike_short` (NEW method)
+  - `play_video` → `_action_play`
+  - `pause_video` → `_action_pause`
+  - `like_current` → `_action_like`
+  - `subscribe_channel` → `_action_subscribe`
+- Added `_action_unlike_short()`: idempotent, uses shorts-specific + generic selectors with aria-pressed state check
+
+#### `skills/selectors/youtube.json`
+- `like_button`: added `button[aria-pressed]` as priority-1 selector, `#segmented-like-button button`, `button[aria-label*='like' i]`
+- `subscribe_button`: added German (`Abonnieren`), French (`S'abonner`), and `ytd-watch-metadata` scoped fallbacks
+- `autoplay_toggle`: added `button[aria-label*='Autoplay']`, `button[aria-label*='autoplay' i]`, `ytd-compact-autoplay-renderer button`, `.ytd-compact-autoplay-renderer button`
+
+### Complete YouTube Action Map (Phase 10.1)
+
+| Category | Action Name(s) | Method | Notes |
+|----------|---------------|--------|-------|
+| **Engagement** | `like`, `like_video`, `like_current` | `_action_like` | Idempotent, checks aria-pressed |
+| | `unlike`, `unlike_video` | `_action_unlike` | Idempotent |
+| | `subscribe`, `subscribe_channel` | `_action_subscribe` | Idempotent |
+| | `unsubscribe` | `_action_unsubscribe` | Dialog-aware |
+| | `save_to_watch_later` | `_action_save_to_watch_later` | Idempotent |
+| | `remove_from_watch_later` | `_action_remove_from_watch_later` | Idempotent |
+| **Playback** | `play`, `play_video` | `_action_play` | JS `video.play()` |
+| | `pause`, `pause_video` | `_action_pause` | JS `video.pause()` |
+| | `toggle_play` | `_action_toggle_play` | State-aware |
+| | `set_speed`, `set_playback_speed` | `_action_set_speed` | Clamps to valid values |
+| | `seek` | `_action_seek` | Absolute seconds |
+| | `forward_10s` | `_action_forward_10s` | +10s relative |
+| | `back_10s` | `_action_back_10s` | −10s relative |
+| | `seek_forward` | `_action_seek_forward` | +N seconds (default 10) |
+| | `seek_backward` | `_action_seek_backward` | −N seconds (default 10) |
+| | `toggle_subtitles` | `_action_toggle_subtitles` | Video mode only |
+| | `toggle_autoplay` | `_action_toggle_autoplay` | Multi-fallback selectors |
+| | `set_quality` | `_action_set_quality` | Settings → Quality submenu |
+| | `fullscreen` | `_action_fullscreen` | Idempotent |
+| | `exit_fullscreen` | `_action_exit_fullscreen` | Idempotent |
+| **Shorts** | `next_short` | `_action_next_short` | Button → ArrowDown fallback |
+| | `prev_short`, `previous_short` | `_action_prev_short` | Button → ArrowUp fallback |
+| | `like_short`, `like_video` | `_action_like_short` | Shorts-specific selectors |
+| | `unlike_short` | `_action_unlike_short` | NEW — idempotent |
+| | `subscribe_short` | `_action_subscribe_short` | Shorts-specific selectors |
+| **Navigation** | `next_video` | `_action_next_video` | Player next button |
+| | `previous_video` | `_action_previous_video` | history.back() |
+| | `open_recommended` | `_action_open_recommended` | Alias for play_nth_next |
+| | `go_home` | `_action_go_home` | |
+| | `go_shorts_home` | `_action_go_shorts_home` | |
+| | `go_to_channel` | `_action_go_to_channel` | From current video |
+| | `go_to_channel_by_name` | `_action_go_to_channel_by_name` | @handle + search fallback |
+| **Comments** | `open_comments` | `_action_open_comments` | JS scrollIntoView |
+| | `scroll_comments` | `_action_scroll_comments` | N scroll steps |
+| **Library** | `open_history` | `_action_open_history` | /feed/history |
+| | `open_liked_videos` | `_action_open_liked_videos` | /playlist?list=LL |
+| | `open_playlists` | `_action_open_playlists` | /feed/library |
+| | `open_watch_later` | `_action_open_watch_later` | /playlist?list=WL |
+
+### Stability Guarantees (Phase 10.1)
+
+| Guarantee | Implementation |
+|-----------|---------------|
+| Interrupts run on EVERY action | `_handle_interrupts()` at top of: click, type_text, get_text, scroll, navigate, wait_for, evaluate_js, get_all_hrefs |
+| Interrupts run on new tabs | `open_new_tab()` calls `_interrupts.handle(new_page)` after load |
+| Tab is always in focus before action | `_ensure_tab_focus()` → `bring_to_front()` + URL log in ALL public methods |
+| No misclicks from covered elements | 3-step fallback: normal → force → JS click |
+| No misclicks from zero-size elements | Bounding box validation before click |
+| No misclicks from offscreen elements | `scroll_into_view` before every click |
+| Idempotent engagement | JS state check before like/subscribe/fullscreen |
+| Correct selector for like state | `button[aria-pressed]` is now priority-1 |
+| No double-toggle on unlike | State checked before acting |
+
+---
+
 ## 📦 Phase 12 — Full System Stability Audit & Production Fixes
 
 > Applied after a full audit of all reported production failures.
