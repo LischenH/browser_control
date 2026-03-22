@@ -1,0 +1,231 @@
+{
+  "_comment": "YouTube selectors — each key is a list[str] with CSS fallbacks in priority order.",
+
+  "search_box": [
+    "#search-input",
+    "input[name='search_query']",
+    "input[type='text'][aria-label*='Search']",
+    "input[type='text']"
+  ],
+  "search_button": [
+    "#search-icon-legacy",
+    "button[aria-label='Search']",
+    "#search-icon button"
+  ],
+  "video_result_item": [
+    "ytd-video-renderer",
+    "#contents ytd-item-section-renderer ytd-video-renderer",
+    "ytd-item-section-renderer ytd-video-renderer"
+  ],
+  "first_video_link": [
+    "ytd-video-renderer:first-of-type a#video-title-link[href*='/watch?v=']",
+    "ytd-video-renderer:first-of-type a[href*='/watch?v=']",
+    "ytd-video-renderer:first-of-type #video-title",
+    "ytd-video-renderer:first-of-type a#video-title-link",
+    "ytd-video-renderer a#video-title-link[href*='/watch?v=']",
+    "ytd-video-renderer h3 a[href*='/watch?v=']"
+  ],
+
+  "_comment_result_links": "Three selector groups for link extraction — choose based on content_type param.",
+  "result_links": [
+    "ytd-video-renderer a#video-title-link[href*='/watch?v=']",
+    "ytd-video-renderer a#video-title-link",
+    "ytd-video-renderer h3 a[href*='/watch?v=']",
+    "ytd-video-renderer h3 a",
+    "ytd-video-renderer #video-title"
+  ],
+  "result_links_video": [
+    "ytd-video-renderer a#video-title-link[href*='/watch?v=']",
+    "ytd-video-renderer a#video-title-link",
+    "ytd-video-renderer h3 a[href*='/watch?v=']",
+    "ytd-video-renderer h3 a"
+  ],
+  "result_links_shorts": [
+    "ytd-reel-item-renderer a[href*='/shorts/']",
+    "ytd-reel-shelf-renderer a[href*='/shorts/']",
+    "a[href*='/shorts/']"
+  ],
+  "result_links_any": [
+    "ytd-video-renderer h3 a, ytd-reel-item-renderer a[href*='/shorts/']",
+    "ytd-video-renderer h3 a"
+  ],
+
+  "_comment_player": "Regular /watch player vs Shorts player.",
+  "play_button": [
+    ".ytp-play-button",
+    "button[aria-label='Play (k)']",
+    "button[title='Play (k)']",
+    "button[aria-label='Pause (k)']"
+  ],
+  "shorts_player_ready": [
+    "ytd-shorts video",
+    "#shorts-player video",
+    "video.html5-main-video",
+    "video[src]"
+  ],
+
+  "_comment_titles": "Regular watch-page title vs Shorts title.",
+  "video_title": [
+    "h1.ytd-watch-metadata yt-formatted-string",
+    "#title h1 yt-formatted-string",
+    "#title h1",
+    "h1.title"
+  ],
+  "shorts_title": [
+    "h2.ytShortsVideoTitleViewModelShortsVideoTitle",
+    "yt-shorts-title-view-model h2",
+    "yt-shorts-title-view-model",
+    "#shorts-player h2",
+    ".ytShortsVideoTitleViewModelHost h2"
+  ],
+  "video_result_title": [
+    "ytd-video-renderer #video-title",
+    "ytd-video-renderer a#video-title-link",
+    "#video-title"
+  ],
+
+  "_comment_engagement": "Engagement buttons: like, subscribe, save.",
+  "like_button": [
+    "ytd-like-button-renderer button[aria-label]",
+    "#top-level-buttons-computed ytd-like-button-renderer button",
+    "ytd-segmented-like-dislike-button-renderer ytd-like-button-renderer button",
+    "button[aria-label='Like']"
+  ],
+  "unlike_button": [
+    "button[aria-label='Unlike']",
+    "ytd-like-button-renderer button[aria-pressed='true']",
+    "#top-level-buttons-computed ytd-like-button-renderer button[aria-pressed='true']"
+  ],
+  "subscribe_button": [
+    "#subscribe-button yt-button-shape button",
+    "#subscribe-button button",
+    "yt-subscribe-button-view-model button",
+    "ytd-subscribe-button-renderer button",
+    "button[aria-label*='Subscribe']"
+  ],
+  "subscribed_indicator": [
+    "button[aria-label*='Unsubscribe']",
+    "#subscribe-button button[aria-label*='Unsubscribe']",
+    "yt-subscribe-button-view-model button[aria-label*='Unsubscribe']"
+  ],
+
+  "_comment_save": "Save / watch-later / playlist buttons.",
+  "save_button": [
+    "button[aria-label='Save to playlist']",
+    "#actions ytd-button-renderer button[aria-label*='Save']",
+    "ytd-menu-renderer ytd-button-renderer:last-of-type button",
+    ".YtSaveButtonPlaceholderHost button",
+    "ytd-button-renderer[id*='save'] button"
+  ],
+  "watch_later_item": [
+    "yt-playlist-add-to-option-renderer:first-child",
+    "ytd-playlist-add-to-option-renderer[playlist-id='WL']",
+    "ytd-playlist-add-to-option-renderer:first-child #checkbox-container",
+    "#playlists yt-playlist-add-to-option-renderer:first-child"
+  ],
+  "playlist_menu": [
+    "ytd-playlist-add-to-option-renderer",
+    "yt-playlist-add-to-option-renderer",
+    "#playlists yt-list-item-view-model",
+    "tp-yt-paper-dialog #playlists ytd-playlist-add-to-option-renderer"
+  ],
+  "playlist_item_checkbox": [
+    "yt-playlist-add-to-option-renderer #checkbox",
+    "ytd-playlist-add-to-option-renderer #checkbox",
+    "yt-playlist-add-to-option-renderer ytd-toggle-button-renderer button"
+  ],
+  "playlist_close_button": [
+    "tp-yt-paper-dialog yt-icon-button[aria-label='Close']",
+    "#close-button button",
+    "yt-icon-button[aria-label='Close']"
+  ],
+
+  "_comment_player_controls": "Player settings, speed, subtitles, quality.",
+  "settings_button": [
+    ".ytp-settings-button",
+    "button[aria-label='Settings']",
+    "button.ytp-settings-button"
+  ],
+  "settings_menu": [
+    ".ytp-settings-menu",
+    ".ytp-popup.ytp-settings-menu",
+    ".ytp-panel-menu"
+  ],
+  "speed_menu": [
+    ".ytp-menuitem[aria-label*='Speed']",
+    ".ytp-menuitem[role='menuitem']:nth-child(2)",
+    ".ytp-panel-menu .ytp-menuitem"
+  ],
+  "speed_panel_items": [
+    ".ytp-panel-menu .ytp-menuitem",
+    ".ytp-speed-menu .ytp-menuitem"
+  ],
+  "quality_menu_item": [
+    ".ytp-menuitem[aria-label*='Quality']",
+    ".ytp-menuitem:last-child",
+    ".ytp-quality-menu"
+  ],
+  "quality_panel_items": [
+    ".ytp-panel-menu .ytp-menuitem",
+    ".ytp-quality-menu .ytp-menuitem"
+  ],
+  "subtitles_button": [
+    ".ytp-subtitles-button",
+    "button[aria-label='Subtitles/CC (c)']",
+    "button[aria-label*='Subtitles']",
+    "button[aria-label*='CC']"
+  ],
+  "autoplay_toggle": [
+    ".ytp-autonav-toggle-button",
+    "button.ytp-autonav-toggle-button",
+    "ytd-compact-autoplay-renderer #toggleButton",
+    "[data-ytac-toggle-enabled]"
+  ],
+
+  "_comment_navigation": "Navigation buttons and links.",
+  "next_button": [
+    ".ytp-next-button",
+    "a.ytp-next-button",
+    "button[aria-label='Next (SHIFT+n)']",
+    "a[aria-label='Next']"
+  ],
+  "channel_link": [
+    "#channel-name a",
+    "ytd-channel-name a",
+    "#owner-name a",
+    "ytd-video-owner-renderer #channel-name a",
+    "ytd-watch-metadata #channel-name a"
+  ],
+  "recommended_video_links": [
+    "#secondary ytd-compact-video-renderer a#thumbnail",
+    "#related ytd-compact-video-renderer a#video-title",
+    "ytd-watch-next-secondary-results-renderer ytd-compact-video-renderer a[href*='/watch']",
+    "#secondary ytd-compact-video-renderer h3 a"
+  ],
+
+  "_comment_comments": "Comments section.",
+  "comments_section": [
+    "#comments",
+    "ytd-comments#comments",
+    "ytd-item-section-renderer[section-identifier='comment-item-section']"
+  ],
+
+  "_comment_shorts": "Shorts-specific navigation and controls.",
+  "shorts_next_button": [
+    "ytd-shorts #navigation-button-down button",
+    "ytd-shorts button[aria-label='Next video']",
+    ".YtReelPlayerOverlayLayout-nextButton button",
+    "#navigation-button-down button"
+  ],
+  "shorts_prev_button": [
+    "ytd-shorts #navigation-button-up button",
+    "ytd-shorts button[aria-label='Previous video']",
+    ".YtReelPlayerOverlayLayout-prevButton button",
+    "#navigation-button-up button"
+  ],
+  "shorts_container": [
+    "ytd-shorts",
+    "#shorts-player",
+    "ytd-shorts-video-renderer"
+  ]
+}

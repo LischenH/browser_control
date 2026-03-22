@@ -1,0 +1,6 @@
+# Browser Control System — Abhängigkeiten
+# Python 3.11+ empfohlen
+
+# Playwright: Browser-Automatisierung via CDP
+# Nach Installation: playwright install chromium
+playwright>=1.44.0
