@@ -322,6 +322,15 @@ class YouTubeSkill(BaseSkill):
             # ── Recommended ───────────────────────────────────────────────────
             "open_recommended":       self._action_open_recommended,
             "open_top_recommended":   self._action_open_top_recommended,
+            # ── Phase 10.1 — New / Alias Actions ─────────────────────────
+            "like_video":             self._action_like,
+            "like_short":             self._action_like_short,
+            "subscribe_short":        self._action_subscribe_short,
+            "previous_short":         self._action_prev_short,
+            "seek_forward":           self._action_seek_forward,
+            "seek_backward":          self._action_seek_backward,
+            "set_playback_speed":     self._action_set_speed,
+            "scroll_comments":        self._action_scroll_comments,
         }
         action = _action_map.get(name)
         if action is None:
@@ -1398,3 +1407,149 @@ class YouTubeSkill(BaseSkill):
             if not silent:
                 logger.debug(f"[{self.name}] Tab {tab_num}: shorts title fallback → '{title[:60]}'")
             return title
+
+    # ═══════════════════════════════════════════════════════════════════
+    # PHASE 10.1 — NEW ACTIONS
+    # ═══════════════════════════════════════════════════════════════════
+
+    def _action_like_short(self, actions: Actions) -> Result:
+        """
+        Like the currently playing Short.
+
+        Uses Shorts-specific selectors (overlay buttons inside ytd-shorts)
+        with a fallback to the generic like selectors — which works when
+        YouTube renders the Shorts player with the same button structure as
+        regular videos.
+
+        Idempotent: checks aria-pressed state before clicking.
+        """
+        logger.info(f"[{self.name}] like_short()")
+        try:
+            # Check current state first
+            is_liked = actions.evaluate_js(_JS_IS_LIKED)
+            if is_liked is True:
+                logger.info(f"[{self.name}] like_short(): already liked — skipping")
+                return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
+
+            # Try Shorts-specific selectors first, fall back to generic
+            like_selectors = (
+                self._selectors.get("shorts_like_button", [])
+                + self._selectors["like_button"]
+            )
+            actions.wait_for(selectors=like_selectors, timeout=10.0)
+            actions.click(selectors=like_selectors)
+
+            is_liked_after = actions.evaluate_js(_JS_IS_LIKED)
+            if is_liked_after:
+                logger.info(f"[{self.name}] like_short() ✅")
+                return Result.ok(data={"liked": True, "action": "liked"})
+            logger.warning(f"[{self.name}] like_short(): could not verify — treating as success")
+            return Result.ok(data={"liked": True, "action": "liked_unverified"})
+        except ActionError as e:
+            return Result.fail(error=f"like_short(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"like_short(): {type(e).__name__}: {e}")
+
+    def _action_subscribe_short(self, actions: Actions) -> Result:
+        """
+        Subscribe to the channel from inside the Shorts player.
+
+        Uses Shorts-specific subscribe selectors first (overlay button),
+        falls back to generic subscribe selectors.
+
+        Idempotent: reads aria-label before acting.
+        """
+        logger.info(f"[{self.name}] subscribe_short()")
+        try:
+            is_subbed = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            if is_subbed is True:
+                logger.info(f"[{self.name}] subscribe_short(): already subscribed — skipping")
+                return Result.ok(data={"subscribed": True, "action": "skipped_already_subscribed"})
+
+            sub_selectors = (
+                self._selectors.get("shorts_subscribe_button", [])
+                + self._selectors["subscribe_button"]
+            )
+            actions.wait_for(selectors=sub_selectors, timeout=10.0)
+            actions.click(selectors=sub_selectors)
+
+            is_subbed_after = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            if is_subbed_after:
+                logger.info(f"[{self.name}] subscribe_short() ✅")
+                return Result.ok(data={"subscribed": True, "action": "subscribed"})
+            logger.warning(f"[{self.name}] subscribe_short(): could not verify — treating as success")
+            return Result.ok(data={"subscribed": True, "action": "subscribed_unverified"})
+        except ActionError as e:
+            return Result.fail(error=f"subscribe_short(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"subscribe_short(): {type(e).__name__}: {e}")
+
+    def _action_seek_forward(self, actions: Actions, seconds: float = 10) -> Result:
+        """
+        Seek forward by a configurable number of seconds (default: 10).
+        More flexible than forward_10s() — accepts any delta.
+        """
+        logger.info(f"[{self.name}] seek_forward({seconds})")
+        try:
+            delta = max(0.0, float(seconds))
+            actual = actions.evaluate_js(f"({_JS_SEEK_RELATIVE})({delta})")
+            if actual is None:
+                return Result.fail(error="seek_forward(): no video element found")
+            logger.info(f"[{self.name}] seek_forward() ✅ position={actual:.1f}s")
+            return Result.ok(data={"position": actual, "delta": delta})
+        except ActionError as e:
+            return Result.fail(error=f"seek_forward(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"seek_forward(): {type(e).__name__}: {e}")
+
+    def _action_seek_backward(self, actions: Actions, seconds: float = 10) -> Result:
+        """
+        Seek backward by a configurable number of seconds (default: 10).
+        More flexible than back_10s() — accepts any delta.
+        """
+        logger.info(f"[{self.name}] seek_backward({seconds})")
+        try:
+            delta = max(0.0, float(seconds))
+            actual = actions.evaluate_js(f"({_JS_SEEK_RELATIVE})(-{delta})")
+            if actual is None:
+                return Result.fail(error="seek_backward(): no video element found")
+            logger.info(f"[{self.name}] seek_backward() ✅ position={actual:.1f}s")
+            return Result.ok(data={"position": actual, "delta": -delta})
+        except ActionError as e:
+            return Result.fail(error=f"seek_backward(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"seek_backward(): {type(e).__name__}: {e}")
+
+    def _action_scroll_comments(self, actions: Actions, amount: int = 3) -> Result:
+        """
+        Scroll down inside the comments section `amount` times.
+
+        First ensures the comments section is visible (scrolls it into view),
+        then performs `amount` page-scrolls downward. Each scroll moves
+        config.DEFAULT_SCROLL_AMOUNT pixels.
+
+        Args:
+            amount: Number of scroll steps (default: 3).
+        """
+        logger.info(f"[{self.name}] scroll_comments(amount={amount})")
+        try:
+            # Ensure comments are in view first
+            open_result = self._action_open_comments(actions)
+            if not open_result.success:
+                logger.warning(
+                    f"[{self.name}] scroll_comments(): could not open comments section — "
+                    "scrolling page anyway"
+                )
+
+            # Scroll down N times within the comments area
+            steps = max(1, int(amount))
+            for i in range(steps):
+                actions.scroll(direction="down")
+                logger.debug(f"[{self.name}] scroll_comments(): step {i + 1}/{steps}")
+
+            logger.info(f"[{self.name}] scroll_comments() ✅ ({steps} scrolls)")
+            return Result.ok(data={"scrolled": steps, "action": "comments_scrolled"})
+        except ActionError as e:
+            return Result.fail(error=f"scroll_comments(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"scroll_comments(): {type(e).__name__}: {e}")

@@ -106,6 +106,12 @@ _COOKIE_SELECTORS: list[str] = [
     "button:has-text('Tout accepter')",
     "button:has-text('Accepter tout')",
     "button:has-text('Accepter')",
+    # YouTube-specific consent dialogs
+    "ytd-consent-bump-v2-renderer button.VfPpkd-LgbsSe",
+    "ytd-consent-bump-v2-renderer button[aria-label*='Accept']",
+    "[aria-label='Accept the use of cookies and other data for the purposes described']",
+    "tp-yt-paper-dialog .ytd-button-renderer:has-text('Accept all')",
+    "ytd-consent-bump-v2-renderer form button:last-of-type",
     # Named IDs — well-known Consent Management Platforms (CMPs)
     "#onetrust-accept-btn-handler",                          # OneTrust
     "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll", # Cookiebot

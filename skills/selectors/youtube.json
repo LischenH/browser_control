@@ -227,5 +227,37 @@
     "ytd-shorts",
     "#shorts-player",
     "ytd-shorts-video-renderer"
+  ],
+
+  "_comment_shorts_engagement": "Like and subscribe buttons inside the Shorts player overlay.",
+  "shorts_like_button": [
+    "ytd-shorts #like-button button[aria-label]",
+    "ytd-shorts ytd-like-button-renderer button",
+    "#like-button button[aria-label]",
+    "ytd-shorts button[aria-label*='Like']",
+    "ytd-shorts button[aria-label*='like']",
+    ".YtShortsVideoActionsRenderer ytd-like-button-renderer button"
+  ],
+  "shorts_unlike_button": [
+    "ytd-shorts button[aria-label*='Unlike']",
+    "ytd-shorts ytd-like-button-renderer button[aria-pressed='true']"
+  ],
+  "shorts_subscribe_button": [
+    "ytd-shorts #subscribe-button yt-button-shape button",
+    "ytd-shorts #subscribe-button button",
+    "ytd-shorts yt-subscribe-button-view-model button",
+    "ytd-shorts ytd-subscribe-button-renderer button",
+    "ytd-shorts button[aria-label*='Subscribe']"
+  ],
+
+  "_comment_comments_scroll": "Selectors for scrolling within the comments section.",
+  "comments_thread": [
+    "ytd-comments #contents",
+    "#comments #contents",
+    "ytd-item-section-renderer[section-identifier='comment-item-section'] #contents"
+  ],
+  "comments_first_item": [
+    "ytd-comment-thread-renderer",
+    "#comments ytd-comment-thread-renderer"
   ]
 }

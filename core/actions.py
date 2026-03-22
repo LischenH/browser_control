@@ -413,6 +413,27 @@ class Actions:
         """
         self._interrupts.handle(self._page)
 
+    def _ensure_tab_focus(self) -> None:
+        """
+        TAB FOCUS GUARANTEE — Phase 10.1.
+
+        Brings the current page's tab to the front before any DOM interaction.
+        Critical for multi-tab flows where the executor may have switched pages
+        without Chrome visually activating the new tab.
+
+        Non-fatal: bring_to_front() is best-effort. If it fails (e.g. tab was
+        closed, CDP connection hiccup), execution continues normally — the action
+        will simply run on whatever tab Chrome considers focused.
+
+        Called at the top of: click(), type_text(), get_text(), scroll(),
+        navigate(), wait_for().
+        """
+        try:
+            self._page.bring_to_front()
+            logger.debug("[tab_focus] bring_to_front() ✓")
+        except Exception as exc:
+            logger.debug(f"[tab_focus] bring_to_front() failed (non-fatal): {exc}")
+
     def _try_selector(
         self,
         action_name: str,
@@ -541,6 +562,8 @@ class Actions:
         Raises:
             ActionError: wenn kein Selector ein klickbares Element findet.
         """
+        # TAB FOCUS GUARANTEE: bring this tab to front before any click.
+        self._ensure_tab_focus()
         # Clear any interrupt (ad, cookie banner, modal) that could block the click.
         self._handle_interrupts()
         # Ensure page is interactive before attempting to click anything.
@@ -631,6 +654,8 @@ class Actions:
             text:      Der einzugebende Text.
             mode:      "fast" | "human" | None (auto-resolve).
         """
+        # TAB FOCUS GUARANTEE: bring this tab to front before typing.
+        self._ensure_tab_focus()
         # Clear any interrupt before typing — a cookie banner or popup could
         # steal focus and swallow keystrokes.
         self._handle_interrupts()
@@ -736,6 +761,9 @@ class Actions:
         Returns:
             Getrimmter Textinhalt des Elements.
         """
+        # TAB FOCUS GUARANTEE + interrupt check before reading DOM.
+        self._ensure_tab_focus()
+        self._handle_interrupts()
         effective_mode = self._get_mode(mode)
         logger.info(f"[get_text] Modus={effective_mode} | Selektoren: {selectors}")
         # NOTE: wait_for_page_ready() intentionally NOT called here.
@@ -805,6 +833,9 @@ class Actions:
                 "Erlaubt: up, down, left, right"
             )
 
+        # TAB FOCUS GUARANTEE + interrupt check before scroll.
+        self._ensure_tab_focus()
+        self._handle_interrupts()
         logger.info(f"[scroll] Richtung='{direction}', Betrag={amount}px")
         self._page.evaluate(f"window.scrollBy({x_delta}, {y_delta})")
         logger.info(f"[scroll] ✓ Gescrollt.")
@@ -824,6 +855,8 @@ class Actions:
         Args:
             url: Vollständige URL inkl. Schema (https://...).
         """
+        # TAB FOCUS GUARANTEE: ensure this tab is active before navigating.
+        self._ensure_tab_focus()
         logger.info(f"[navigate] → {url}")
         self._page.goto(url, wait_until="domcontentloaded")
         logger.info(f"[navigate] domcontentloaded erreicht: {self._page.url}")

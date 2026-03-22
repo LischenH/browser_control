@@ -213,6 +213,20 @@ class _TemplateEngine(_PlannerEngine):
         r"remove\s+from\s+playlist\s+(.+)",
         re.IGNORECASE,
     )
+    # Phase 10.1 — Shorts batch scroll: "watch next 5 shorts"
+    _RE_SHORTS_SCROLL_N = re.compile(
+        r"(?:watch|scroll|view)\s+(?:next\s+)?(\d+)\s+shorts?",
+        re.IGNORECASE,
+    )
+    # seek forward/backward with custom delta: "seek forward 30 seconds"
+    _RE_SEEK_FORWARD = re.compile(
+        r"(?:seek|skip)\s+forward\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)?|forward\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)",
+        re.IGNORECASE,
+    )
+    _RE_SEEK_BACKWARD = re.compile(
+        r"(?:seek|skip)\s+(?:back(?:ward)?|rewind)\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)?|(?:rewind|back)\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)",
+        re.IGNORECASE,
+    )
     # Amazon read reviews: "read 5 reviews", "show 3 reviews"
     _RE_READ_REVIEWS = re.compile(
         r"(?:read|show|get)\s+(\d+)\s+reviews?",
@@ -297,6 +311,33 @@ class _TemplateEngine(_PlannerEngine):
             steps.append(self._yt_step("like", "Like this video"))
             steps.append(self._yt_step("subscribe", "Subscribe to this channel"))
             return steps
+        
+        # Phase 10.1: "watch next N shorts"
+        shorts_n_m = self._RE_SHORTS_SCROLL_N.search(g)
+        if shorts_n_m:
+            n = int(shorts_n_m.group(1))
+            return [self._yt_step("next_short", f"Watch short {i+1}/{n}") for i in range(n)]
+
+        # Phase 10.1: "seek forward 30s"
+        sf_m = self._RE_SEEK_FORWARD.search(g)
+        if sf_m:
+            secs = float(sf_m.group(1) or sf_m.group(2) or 10)
+            return [self._yt_step("seek_forward", f"Seek forward {secs}s", seconds=secs)]
+
+        # Phase 10.1: "rewind 30s"  
+        sb_m = self._RE_SEEK_BACKWARD.search(g)
+        if sb_m:
+            secs = float(sb_m.group(1) or sb_m.group(2) or 10)
+            return [self._yt_step("seek_backward", f"Seek backward {secs}s", seconds=secs)]
+
+        # Phase 10.1: scroll comments
+        if re.search(r"scroll\s+comments?", g, re.IGNORECASE):
+            amt_m = re.search(r"(\d+)\s+times?", g, re.IGNORECASE)
+            return [self._yt_step("scroll_comments", "Scroll comments", amount=int(amt_m.group(1)) if amt_m else 3)]
+
+        # Phase 10.1: like this short
+        if re.search(r"like\s+(?:this\s+)?short", g, re.IGNORECASE):
+            return [self._yt_step("like_short", "Like this Short")]
 
         # ── Speed ─────────────────────────────────────────────────────────────
         speed_m = self._RE_SET_SPEED.search(g)
