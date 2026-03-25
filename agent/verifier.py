@@ -336,7 +336,7 @@ class Verifier:
             expected=substring,
             actual=current_url,
             passed=passed,
-            transient=False,
+            transient=True,
             note="" if passed else f"URL '{current_url}' enthält '{substring}' nicht.",
         )
 
@@ -385,25 +385,34 @@ class Verifier:
         if isinstance(selectors, str):
             selectors = [selectors]
 
-        # Kurzer Timeout pro Selector: Seite könnte noch laden → transient
-        check_timeout = min(config.DEFAULT_TIMEOUT * 1000, 3000)  # max 3s pro Versuch
+        # Race all selectors simultaneously using a CSS comma-union.
+        # The full timeout is shared — if any selector is already visible it
+        # resolves immediately instead of burning the full timeout per selector.
+        check_timeout = min(config.DEFAULT_TIMEOUT * 1000, 3000)  # max 3s total
 
         found_selector: str | None = None
-        tried: list[str] = []
+        combined = ", ".join(selectors)
 
-        for sel in selectors:
-            try:
-                self._page.wait_for_selector(
-                    sel,
-                    state="visible",
-                    timeout=check_timeout,
-                )
-                found_selector = sel
-                break
-            except PlaywrightTimeoutError:
-                tried.append(f"'{sel}' (timeout)")
-            except Exception as exc:
-                tried.append(f"'{sel}' ({type(exc).__name__})")
+        try:
+            self._page.wait_for_selector(
+                combined,
+                state="visible",
+                timeout=check_timeout,
+            )
+            # Identify which individual selector actually matched
+            for sel in selectors:
+                try:
+                    if self._page.is_visible(sel):
+                        found_selector = sel
+                        break
+                except Exception:
+                    continue
+            if found_selector is None:
+                found_selector = selectors[0]  # at least one matched; use first
+        except PlaywrightTimeoutError:
+            pass
+        except Exception:
+            pass
 
         passed = found_selector is not None
 
@@ -423,7 +432,7 @@ class Verifier:
             transient=not passed,
             note=(
                 "" if passed
-                else f"Kein Selector sichtbar. Versucht: {', '.join(tried)}"
+                else f"Kein Selector sichtbar. Versucht: {combined}"
             ),
         )
 

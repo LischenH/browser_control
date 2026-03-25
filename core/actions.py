@@ -763,7 +763,7 @@ class Actions:
             )
 
         # Identify the winning selector (first one currently visible)
-        winning = combined  # fallback if none individually match (shouldn't happen)
+        winning = selectors[0]  # fallback if none individually match (shouldn't happen)
         for sel in selectors:
             try:
                 if self._page.is_visible(sel):

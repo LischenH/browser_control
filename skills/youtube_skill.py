@@ -69,6 +69,7 @@ from __future__ import annotations
 
 import logging
 import re
+import urllib.parse
 from typing import Callable, Literal
 
 from core.actions import Actions, ActionError
@@ -139,8 +140,7 @@ _JS_IS_LIKED = """
   const btn = document.querySelector('ytd-like-button-renderer button[aria-pressed]')
            || document.querySelector('#top-level-buttons-computed button[aria-pressed]');
   if (btn) return btn.getAttribute('aria-pressed') === 'true';
-  // Fallback: Unlike button exists = already liked
-  return !!document.querySelector('button[aria-label="Unlike"]');
+  return false;
 }
 """
 
@@ -150,10 +150,11 @@ _JS_IS_SUBSCRIBED = """
           || document.querySelector('yt-subscribe-button-view-model')
           || document.querySelector('ytd-subscribe-button-renderer');
   if (!el) return null;
-  const btn = el.querySelector('button[aria-label]');
+  const btn = el.querySelector('button');
   if (!btn) return null;
-  const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-  return label.includes('unsubscrib') || label.includes('abonnement');
+  if (btn.getAttribute('aria-pressed') === 'true') return true;
+  if (btn.classList.contains('yt-spec-button-shape--tonal')) return true;
+  return false;
 }
 """
 
@@ -1042,7 +1043,7 @@ class YouTubeSkill(BaseSkill):
         if not name:
             return Result.fail(error="go_to_channel_by_name(): name parameter required")
         try:
-            handle = name.lstrip("@")
+            handle = urllib.parse.quote(name.lstrip("@"))
             url = f"https://www.youtube.com/@{handle}"
             actions.navigate(url)
             final_url = actions._page.url  # noqa: SLF001

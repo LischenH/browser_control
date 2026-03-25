@@ -169,7 +169,7 @@ class Executor:
                         )
                         self._page = live_page
                         # Rebuild verifier so conditions are checked on new page
-                        self._verifier = type(self._verifier)(live_page)
+                        self._verifier = Verifier(live_page, max_retries=self._max_retries)
                 except Exception as _sync_exc:
                     logger.debug(
                         "[Executor] Page sync skipped (non-fatal): %s", _sync_exc
