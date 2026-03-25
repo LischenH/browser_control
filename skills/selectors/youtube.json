@@ -124,10 +124,10 @@
     "ytd-button-renderer[id*='save'] button"
   ],
   "watch_later_item": [
-    "yt-playlist-add-to-option-renderer:first-child",
     "ytd-playlist-add-to-option-renderer[playlist-id='WL']",
     "ytd-playlist-add-to-option-renderer:first-child #checkbox-container",
-    "#playlists yt-playlist-add-to-option-renderer:first-child"
+    "#playlists yt-playlist-add-to-option-renderer:first-child",
+    "yt-playlist-add-to-option-renderer:first-child"
   ],
   "playlist_menu": [
     "ytd-playlist-add-to-option-renderer",

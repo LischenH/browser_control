@@ -36,6 +36,10 @@ LOG_LEVEL: str = "DEBUG"
 # ─── Planner (Phase 5 — hier schon definiert, damit config vollständig ist) ───
 PLANNER_ENGINE: str = "template"  # "template" | "llm"
 
+# ─── Safety Guards ───────────────────────────────────────────────────────────────
+# Disables buy_now() globally. Must be explicitly set to True to allow checkout.
+BUY_NOW_ENABLED: bool = False
+
 # ─── Scroll ───────────────────────────────────────────────────────────────────
 # Standard-Scrollbetrag in Pixeln, wenn kein amount übergeben wird.
 DEFAULT_SCROLL_AMOUNT: int = 500

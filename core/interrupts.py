@@ -91,11 +91,7 @@ _COOKIE_SELECTORS: list[str] = [
     "button:has-text('Got it')",
     "button:has-text('I agree')",
     "button:has-text('I Accept')",
-    "button:has-text('OK')",
-    "button:has-text('Okay')",
-    "button:has-text('Confirm')",
     "button:has-text('Confirm all')",
-    "button:has-text('Continue')",
     # German variants
     "button:has-text('Alle akzeptieren')",
     "button:has-text('Akzeptieren')",

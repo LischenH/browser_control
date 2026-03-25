@@ -62,9 +62,9 @@
     "#sw-gtc .a-button-text"
   ],
   "remove_from_cart_button": [
-    "input[value='Delete']",
     "input[data-action='delete']",
     ".sc-action-delete input",
+    "input[value='Delete']",
     "a[data-action='delete']"
   ],
   "wishlist_button": [
@@ -81,9 +81,7 @@
     "input[name='submit.add-to-list']"
   ],
   "remove_from_wishlist_button": [
-    "input[name='submit.delete']",
-    ".wl-item-view a[data-action*='delete']",
-    "input[value='Delete list item']"
+    ".wl-item-view a[data-action*='delete']"
   ],
   "buy_now_button": [
     "#buy-now-button",

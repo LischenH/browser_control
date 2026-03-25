@@ -37,6 +37,7 @@ import logging
 import re
 from typing import Callable
 
+import config
 from core.actions import Actions, ActionError
 from skills.base_skill import BaseSkill, Result
 
@@ -461,6 +462,9 @@ class AmazonSkill(BaseSkill):
         NOTE: This initiates checkout — use with care.
         """
         logger.info(f"[{self.name}] buy_now()")
+        if not config.BUY_NOW_ENABLED:
+            logger.warning(f"[{self.name}] buy_now() blocked — BUY_NOW_ENABLED is False")
+            return Result.fail("buy_now disabled by config")
         try:
             is_product = actions.evaluate_js(_JS_IS_PRODUCT_PAGE)
             if not is_product:

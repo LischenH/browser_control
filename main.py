@@ -343,6 +343,7 @@ def demo_phase4_executor(goal: str) -> None:
             page=conn.active_page,
             skill_manager=skill_manager,
             verifier=verifier,
+            connection=conn,
         )
 
         logger.info("\n--- Starte Executor ---")
@@ -454,6 +455,7 @@ def demo_phase8_llm(goal: str) -> None:
             page=conn.active_page,
             skill_manager=skill_manager,
             verifier=verifier,
+            connection=conn,
         )
 
         logger.info("\n--- Starte Executor ---")
@@ -526,6 +528,7 @@ def demo_phase7_amazon(goal: str) -> None:
             page=conn.active_page,
             skill_manager=skill_manager,
             verifier=verifier,
+            connection=conn,
         )
 
         logger.info("\n--- Starte Executor ---")
@@ -603,6 +606,7 @@ def demo_phase9_multitab(goal: str) -> None:
             page=conn.active_page,
             skill_manager=skill_manager,
             verifier=verifier,
+            connection=conn,
         )
 
         logger.info("\n--- Starte Multi-Tab-Executor ---")
