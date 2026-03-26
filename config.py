@@ -4,6 +4,7 @@ config.py — Zentrale Konfiguration für das Browser Control System.
 Alle Module importieren von hier. Nichts ist hardcodiert.
 Phase 1: Chrome-Verbindung, Timeouts, Retry-Logik.
 Phase 7c: Execution Mode (FAST / HUMAN / AUTO).
+Phase E: Data Layer output directory and format.
 """
 
 # ─── Chrome CDP-Verbindung ─────────────────────────────────────────────────────
@@ -77,3 +78,15 @@ PAGE_READY_DOM_TIMEOUT: float = 8.0
 # Optimized JS: a completely stable DOM resolves in ~50ms (one poll cycle),
 # NOT the full observe_ms — so this only applies when mutations are seen.
 DOM_STABILITY_OBSERVE_MS: int = 200
+
+# ─── Data Layer (Phase E) ─────────────────────────────────────────────────────
+# Directory where session result files are written.
+# Relative paths are resolved from the project root (where main.py lives).
+# Set to an absolute path to write elsewhere (e.g. "C:\\logs\\browser_control").
+DATA_OUTPUT_DIR: str = "data/results"
+
+# Output format for session results.
+#   "json"  → one pretty-printed .json file per session (<session_id>.json)
+#   "jsonl" → one compact line appended to a daily rolling file
+#             (sessions_YYYY-MM-DD.jsonl) — good for log aggregation
+DATA_FORMAT: str = "json"

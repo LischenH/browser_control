@@ -11,6 +11,12 @@ FIX HISTORY (Production Stability):
     checked against the correct DOM.
   - Debug logging added for: selected selector, retry counts, failures.
 
+Phase E additions:
+  - After run() completes (success or failure), a SessionResult is built from
+    the execution trace and persisted by ResultWriter.
+  - Per-step timing (duration_ms) is measured with time.perf_counter().
+  - Write failures are non-fatal: they are logged but never propagate.
+
 Stable Contract (never changes):
   executor.run(steps: list[Step]) -> dict
 
@@ -39,6 +45,10 @@ from agent.planner import Step
 from agent.verifier import Verifier, VerifyResult
 from core.actions import Actions
 from skill_manager.manager import SkillManager
+
+# Phase E: data layer
+from data.schema import SessionResult, TabResult, StepResult
+from data.writer import ResultWriter
 
 # Optional import -- only used when connection is passed to Executor.
 # Guarded to avoid circular import issues in test environments.
@@ -86,6 +96,7 @@ class Executor:
       - Tab tracking  -> collect opened tabs from open_top_results (Phase 9)
       - Idempotency   -> on-page toggle actions never double-fire (Phase 10)
       - Page sync     -> resync active page from connection before each step (FIX)
+      - Data persist  -> write SessionResult to disk after run() (Phase E)
 
     Usage:
         executor = Executor(page=conn.active_page, skill_manager=SkillManager(),
@@ -101,6 +112,7 @@ class Executor:
         verifier: Verifier | None = None,
         max_retries: int | None = None,
         connection=None,  # Optional[BrowserConnection] -- enables active-page sync
+        goal: str = "",   # Phase E: stored in SessionResult for traceability
     ) -> None:
         self._page = page
         self._connection = connection  # FIX: re-read active_page before each step
@@ -108,6 +120,8 @@ class Executor:
         self._verifier = verifier or Verifier(page)
         self._max_retries = max_retries if max_retries is not None else config.MAX_RETRIES
         self._opened_tabs: list[dict] = []
+        self._goal = goal  # Phase E
+        self._writer = ResultWriter()  # Phase E: one writer instance per executor
         logger.info(
             "[Executor] Initialized | "
             "Skills: %s | MAX_RETRIES=%d | connection=%s",
@@ -135,6 +149,7 @@ class Executor:
           7. Retry on transient failures (up to MAX_RETRIES)
           8. Hard-fail on permanent failures -> abort plan
           9. Collect tab data from open_top_results / open_top_recommended
+         10. (Phase E) Persist SessionResult after plan finishes
 
         Args:
             steps: Ordered list of Step objects.
@@ -144,9 +159,23 @@ class Executor:
         """
         self._opened_tabs = []
 
+        # Phase E: build a SessionResult for this run
+        session = SessionResult(
+            goal=self._goal,
+            skill_names=list(self._skill_manager.skill_names),
+            steps_total=len(steps),
+        )
+        session_start = time.perf_counter()
+
+        # Track per-tab step lists: url -> TabResult
+        # We maintain a single active TabResult and close it when the page changes.
+        active_tab: TabResult | None = None
+
         if not steps:
             logger.warning("[Executor] run() called with empty step list.")
-            return self._build_success(steps_completed=0, data=[])
+            result = self._build_success(steps_completed=0, data=[])
+            self._persist_session(session, result, session_start, active_tab)
+            return result
 
         self._log_plan_header(steps)
         collected_data: list[Any] = []
@@ -155,10 +184,6 @@ class Executor:
             logger.info(self._step_banner(step_idx, len(steps), step))
 
             # -- Step 0: Sync active page from connection (FIX) ----------------
-            # After an open_tab() step, conn.active_page points to the new tab.
-            # Without this sync, the next step creates Actions(old_page) and
-            # operates on the wrong tab. This is the root cause of multi-tab
-            # steps not executing on the intended tab.
             if self._connection is not None:
                 try:
                     live_page = self._connection.active_page
@@ -167,6 +192,10 @@ class Executor:
                             "[Executor]   Page synced -> '%s'",
                             live_page.url[:60],
                         )
+                        # Flush the old TabResult if page changed
+                        if active_tab is not None:
+                            session.tabs.append(active_tab)
+                        active_tab = None
                         self._page = live_page
                         # Rebuild verifier so conditions are checked on new page
                         self._verifier = Verifier(live_page, max_retries=self._max_retries)
@@ -174,6 +203,13 @@ class Executor:
                     logger.debug(
                         "[Executor] Page sync skipped (non-fatal): %s", _sync_exc
                     )
+
+            # Phase E: ensure we have an active TabResult for the current page
+            if active_tab is None:
+                active_tab = TabResult(
+                    url=self._page.url,
+                    title="",  # filled after execution
+                )
 
             # -- Step 1: Route to skill ----------------------------------------
             url_for_routing = step.url or self._page.url
@@ -192,13 +228,24 @@ class Executor:
                     f"Check: get_action('{step.action_name}') must return a Callable."
                 )
                 logger.error("[Executor] FAIL %s", msg)
-                return self._build_error(
+                # Phase E: record this failed step before returning
+                step_rec = StepResult(
+                    step_index=step_idx,
+                    action_name=step.action_name,
+                    description=step.description or "",
+                    success=False,
+                    error_message=msg,
+                )
+                active_tab.steps.append(step_rec)
+                result = self._build_error(
                     steps_completed=step_idx,
                     data=collected_data,
                     step=step,
                     verify_result=None,
                     message=msg,
                 )
+                self._persist_session(session, result, session_start, active_tab)
+                return result
 
             # -- Step 3: Extract "repeat" + deep-copy params -------------------
             action_params = copy.deepcopy(dict(step.params))
@@ -222,6 +269,10 @@ class Executor:
 
                 rep_params = copy.deepcopy(action_params)
 
+                # Phase E: time each repetition individually
+                step_start_time = time.perf_counter()
+                step_start_iso = _now_iso()
+
                 step_result = self._execute_with_retry(
                     step=step,
                     step_idx=step_idx,
@@ -229,6 +280,24 @@ class Executor:
                     actions=actions,
                     action_params=rep_params,
                 )
+
+                step_duration_ms = (time.perf_counter() - step_start_time) * 1000
+
+                # Phase E: build StepResult record
+                vr = step_result.get("verify_result")
+                step_rec = StepResult(
+                    step_index=step_idx,
+                    action_name=step.action_name,
+                    description=step.description or "",
+                    success=step_result["success"],
+                    data=step_result.get("data"),
+                    error_message=step_result.get("message", "") if not step_result["success"] else "",
+                    verify_status=vr.status if vr is not None else "none",
+                    verify_reason=vr.reason if vr is not None else "",
+                    duration_ms=step_duration_ms,
+                    timestamp_start=step_start_iso,
+                )
+                active_tab.steps.append(step_rec)
 
                 if step_result["success"]:
                     step_data = step_result["data"]
@@ -249,20 +318,74 @@ class Executor:
                         f" (rep {rep + 1}/{repeat})",
                         step_result["message"],
                     )
-                    return self._build_error(
+                    result = self._build_error(
                         steps_completed=step_idx,
                         data=collected_data,
                         step=step,
                         verify_result=step_result.get("verify_result"),
                         message=step_result["message"],
                     )
+                    self._persist_session(session, result, session_start, active_tab)
+                    return result
 
         logger.info(
             "[Executor] PLAN COMPLETE -- %d steps succeeded%s",
             len(steps),
             f" | opened_tabs={len(self._opened_tabs)}" if self._opened_tabs else "",
         )
-        return self._build_success(steps_completed=len(steps), data=collected_data)
+        result = self._build_success(steps_completed=len(steps), data=collected_data)
+        self._persist_session(session, result, session_start, active_tab)
+        return result
+
+    # -------------------------------------------------------------------------
+    # Phase E: session persistence
+    # -------------------------------------------------------------------------
+
+    def _persist_session(
+        self,
+        session: SessionResult,
+        run_result: dict[str, Any],
+        session_start: float,
+        active_tab: TabResult | None,
+    ) -> None:
+        """
+        Finalize SessionResult fields from run_result and write to disk.
+
+        Non-fatal: any exception is caught and logged.
+        """
+        try:
+            # Flush the last active tab
+            if active_tab is not None and active_tab not in session.tabs:
+                # Best-effort page title
+                try:
+                    active_tab.title = self._page.title()
+                except Exception:
+                    pass
+                session.tabs.append(active_tab)
+
+            # Fill opened_tabs on each TabResult from the collected list
+            if self._opened_tabs:
+                for tab_rec in session.tabs:
+                    tab_rec.opened_tabs = list(self._opened_tabs)
+
+            # Top-level session fields
+            session.success = run_result.get("success", False)
+            session.steps_completed = run_result.get("steps_completed", 0)
+            session.opened_tabs = list(self._opened_tabs)
+            session.duration_ms = (time.perf_counter() - session_start) * 1000
+            session.timestamp_end = _now_iso()
+
+            error_info = run_result.get("error")
+            if error_info and not session.success:
+                session.error_message = error_info.get("message", "")
+
+            self._writer.write(session)
+        except Exception as exc:
+            logger.error(
+                "[Executor] Phase E persistence error (non-fatal): %s: %s",
+                type(exc).__name__,
+                exc,
+            )
 
     # -------------------------------------------------------------------------
     # Internal Methods
@@ -472,3 +595,14 @@ class Executor:
             },
             "opened_tabs": list(self._opened_tabs),
         }
+
+
+# ─── Helpers (no external deps) ───────────────────────────────────────────────
+
+def _now_iso() -> str:
+    """Return current UTC time as ISO-8601 string."""
+    t = time.gmtime()
+    return (
+        f"{t.tm_year:04d}-{t.tm_mon:02d}-{t.tm_mday:02d}"
+        f"T{t.tm_hour:02d}:{t.tm_min:02d}:{t.tm_sec:02d}Z"
+    )
