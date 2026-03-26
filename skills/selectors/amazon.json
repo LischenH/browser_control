@@ -42,12 +42,6 @@
     "#title span",
     "h1.a-size-large span"
   ],
-  "add_to_cart": [
-    "#add-to-cart-button",
-    "input#add-to-cart-button",
-    "input[name='submit.add-to-cart']"
-  ],
-
   "_comment_shopping": "Shopping actions: cart, wishlist, buy now.",
   "add_to_cart_button": [
     "#add-to-cart-button",
@@ -111,12 +105,12 @@
 
   "_comment_product": "Product page data selectors.",
   "price_selector": [
-    "#priceblock_ourprice",
-    "#priceblock_dealprice",
     ".a-price .a-offscreen",
+    "#corePrice_feature_div .a-price",
     "#price_inside_buybox",
     "span.a-price-whole",
-    "#corePrice_feature_div .a-price"
+    "#priceblock_ourprice",
+    "#priceblock_dealprice"
   ],
   "rating_selector": [
     "#averageCustomerReviews #acrPopover",

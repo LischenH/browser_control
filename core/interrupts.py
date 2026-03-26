@@ -29,9 +29,15 @@ Public API:
 """
 
 import logging
+import time
 from typing import Optional
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
+
+# ── Cache constants ───────────────────────────────────────────────────────────
+# MAJOR-9: Skip the full interrupt scan if the page URL has not changed and
+# the last clean-pass happened within this window (seconds).
+_INTERRUPT_CACHE_TTL: float = 2.0
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +190,11 @@ class InterruptHandler:
     def __init__(self) -> None:
         # Track the last handled selector per group (useful for debugging / logging)
         self._last_dismissed: dict[str, str] = {}
+        # MAJOR-9 — Interrupt cache
+        # Skips the full selector scan when the URL is unchanged and the last
+        # clean pass was < _INTERRUPT_CACHE_TTL seconds ago.
+        self._last_clean_url: str = ""
+        self._last_clean_time: float = 0.0
 
     def handle(self, page: Page) -> bool:
         """
@@ -199,6 +210,25 @@ class InterruptHandler:
         Returns:
             True if at least one interrupt was dismissed, False if page was clean.
         """
+        # ── MAJOR-9: Cache fast-path ──────────────────────────────────────────
+        try:
+            current_url = page.url
+        except Exception:
+            current_url = ""
+
+        now = time.monotonic()
+        if (
+            current_url
+            and current_url == self._last_clean_url
+            and (now - self._last_clean_time) < _INTERRUPT_CACHE_TTL
+        ):
+            logger.debug(
+                "[interrupts] Cache hit — skipping scan "
+                f"({now - self._last_clean_time:.3f}s since last clean pass)"
+            )
+            return False
+        # ── End cache fast-path ───────────────────────────────────────────────
+
         any_dismissed = False
         for group_name, selectors in _INTERRUPT_GROUPS:
             dismissed = self._try_dismiss(page, group_name, selectors)
@@ -206,8 +236,14 @@ class InterruptHandler:
                 any_dismissed = True
         if any_dismissed:
             logger.info("[interrupts] ✓ Interrupts cleared.")
+            # Invalidate cache — a dismissal means the page state changed.
+            self._last_clean_url = ""
+            self._last_clean_time = 0.0
         else:
             logger.debug("[interrupts] No interrupts detected.")
+            # Store clean-pass result so the next call within TTL is skipped.
+            self._last_clean_url = current_url
+            self._last_clean_time = now
         return any_dismissed
 
     def _try_dismiss(self, page: Page, group: str, selectors: list[str]) -> bool:

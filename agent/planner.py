@@ -547,14 +547,6 @@ class _TemplateEngine(_PlannerEngine):
                                         "#contents ytd-item-section-renderer ytd-video-renderer"],
                  },
                  description=f"Search for '{query}'"),
-            Step(url="youtube.com", action_name="read_result_title",
-                 params={},
-                 verify_conditions={
-                     "url_contains": "results",
-                     "element_exists": ["ytd-video-renderer #video-title",
-                                        "ytd-video-renderer a#video-title-link"],
-                 },
-                 description="Read first result title"),
         ]
 
     @staticmethod
@@ -645,13 +637,6 @@ class _TemplateEngine(_PlannerEngine):
                      "element_exists": ["div[data-component-type='s-search-result']"],
                  },
                  description=f"Search for '{query}'"),
-            Step(url="amazon", action_name="read_result_title",
-                 params={},
-                 verify_conditions={
-                     "url_contains": "s?k=",
-                     "element_exists": ["div[data-component-type='s-search-result'] h2 span"],
-                 },
-                 description="Read first result title"),
         ]
 
     @staticmethod
