@@ -1,4 +1,4 @@
-# 🧠 Browser Control — Rebuild Architecture
+9# 🧠 Browser Control — Rebuild Architecture
 
 > **Status:** Design-complete, pre-implementation  
 > **Based on:** Previous architecture session + analysis of `browser_automation` v2  
