@@ -72,8 +72,7 @@
     "#addToWishlist-bb",
     "input#add-to-wishlist-button-submit",
     "span[id*='wishlist'] input[type='submit']",
-    "button[aria-label*='Add to List']",
-    "#a-autoid-3-announce"
+    "button[aria-label*='Add to List']"
   ],
   "wishlist_confirm_button": [
     "#add-to-list-submit",

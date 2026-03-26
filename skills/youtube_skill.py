@@ -849,6 +849,11 @@ class YouTubeSkill(BaseSkill):
         """
         Set video quality via the settings menu.
         quality: "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p", "auto"
+
+        Improvements (Phase 10.1):
+        - Multi-language "auto" support: matches "auto", "automatisch", "automatique", etc.
+        - Resolution detection via regex (\d+p) instead of text equality — locale-safe.
+        - No aria-label reliance: uses innerText comparison only.
         """
         logger.info(f"[{self.name}] set_quality('{quality}')")
         try:
@@ -869,20 +874,47 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=self._selectors["quality_panel_items"], timeout=5.0)
             q_lower = quality.lower().strip()
 
-            # Use JS to find and click the matching quality option
+            # Determine if user wants "auto" (any language) or a specific resolution.
+            # Resolution must contain digits followed by 'p' (e.g. "1080p", "720p").
+            wants_auto = (q_lower == "auto") or not re.search(r"\d+p", q_lower)
+
+            # Extract the numeric resolution target for regex matching (e.g. "1080" from "1080p")
+            res_match = re.search(r"(\d+)p?", q_lower)
+            res_target = res_match.group(1) if res_match and not wants_auto else None
+
+            # Use JS to find and click the matching quality option.
+            # Strategy:
+            #   - For "auto": click the item whose text STARTS with "auto" (language-agnostic)
+            #     because all YouTube localisations begin with that root.
+            #   - For a resolution: match items containing the digit string followed by 'p'
+            #     so "1080p", "1080p (HD)", etc. all match — no aria-label needed.
+            js_target = res_target if res_target else "auto"
             click_result = actions.evaluate_js(f"""
             () => {{
               const items = document.querySelectorAll('.ytp-panel-menu .ytp-menuitem');
-              const target = '{q_lower}';
+              const target = {js_target!r};
+              const wantsAuto = {str(wants_auto).lower()};
+              const reRes = /\\b(\\d+)p/i;
               for (const item of items) {{
-                const text = (item.innerText || '').toLowerCase();
-                if (text.includes(target) || (target === 'auto' && text.includes('auto'))) {{
-                  item.click();
-                  return text;
+                const text = (item.innerText || item.textContent || '').trim();
+                const textLow = text.toLowerCase();
+                if (wantsAuto) {{
+                  // Match any localised variant of "auto" — word starts with "auto"
+                  if (/\\bauto/i.test(text)) {{
+                    item.click();
+                    return text;
+                  }}
+                }} else {{
+                  // Match resolution via \d+p pattern — locale-safe, no aria-label needed
+                  const m = reRes.exec(text);
+                  if (m && m[1] === target) {{
+                    item.click();
+                    return text;
+                  }}
                 }}
               }}
-              // Fallback: click first item if no match
-              if (items.length > 0) {{ items[0].click(); return items[0].innerText; }}
+              // Fallback: click first item if no exact match found
+              if (items.length > 0) {{ items[0].click(); return items[0].innerText || items[0].textContent || ''; }}
               return null;
             }}
             """)
@@ -1080,22 +1112,45 @@ class YouTubeSkill(BaseSkill):
             return Result.fail(error=f"go_to_channel_by_name(): {type(e).__name__}: {e}")
 
     def _action_open_comments(self, actions: Actions) -> Result:
-        """Scroll to the comments section and wait for it to load."""
+        """
+        Scroll to the comments section and wait for it to load.
+
+        Phase 10.1 fix (MINOR-8): returns Result.fail() if the comments section
+        element is not found — no longer silently succeeds when comments are
+        disabled or the selector misses.
+        """
         logger.info(f"[{self.name}] open_comments()")
         try:
+            mode = self._current_mode(actions)
+            if mode == "shorts":
+                return Result.fail(error="open_comments(): comments not available in Shorts mode")
+
             # Scroll comments section into view via JS
-            actions.evaluate_js(
+            found = actions.evaluate_js(
                 "() => {"
-                "  const c = document.querySelector('#comments') "
+                "  const c = document.querySelector('#comments')"
                 "         || document.querySelector('ytd-comments');"
-                "  if (c) c.scrollIntoView({behavior: 'instant', block: 'start'});"
+                "  if (!c) return false;"
+                "  c.scrollIntoView({behavior: 'instant', block: 'start'});"
+                "  return true;"
                 "}"
             )
-            # Wait for comments to appear
+
+            if not found:
+                return Result.fail(
+                    error="open_comments(): #comments element not found — "
+                          "comments may be disabled or page not fully loaded"
+                )
+
+            # Wait for comment threads to actually render
             try:
                 actions.wait_for(selectors=self._selectors["comments_section"], timeout=10.0)
             except ActionError:
-                pass  # Comments may be disabled or slow
+                # Comments element exists but threads are slow / disabled
+                return Result.fail(
+                    error="open_comments(): comments section found but no threads loaded — "
+                          "comments may be disabled for this video"
+                )
 
             logger.info(f"[{self.name}] open_comments() ✅")
             return Result.ok(data={"action": "scrolled_to_comments"})
@@ -1565,9 +1620,14 @@ class YouTubeSkill(BaseSkill):
         """
         Scroll down inside the comments section `amount` times.
 
-        First ensures the comments section is visible (scrolls it into view),
-        then performs `amount` page-scrolls downward. Each scroll moves
-        config.DEFAULT_SCROLL_AMOUNT pixels.
+        Phase 10.1 fix: Uses JS to scroll the `#comments #contents` element
+        directly rather than issuing generic page scrolls. This is more reliable
+        because YouTube's comments panel is a separately-scrollable container on
+        many page layouts.
+
+        Falls back to generic page scroll if the JS container scroll reports
+        that no scrollable container was found (e.g. single-column layouts where
+        comments scroll with the page body).
 
         Args:
             amount: Number of scroll steps (default: 3).
@@ -1578,18 +1638,54 @@ class YouTubeSkill(BaseSkill):
             open_result = self._action_open_comments(actions)
             if not open_result.success:
                 logger.warning(
-                    f"[{self.name}] scroll_comments(): could not open comments section — "
-                    "scrolling page anyway"
+                    f"[{self.name}] scroll_comments(): open_comments failed — "
+                    f"reason: {open_result.error}"
+                )
+                return Result.fail(
+                    error=f"scroll_comments(): cannot scroll — {open_result.error}"
                 )
 
-            # Scroll down N times within the comments area
             steps = max(1, int(amount))
+            # Pixel distance per step — ~one viewport height of content
+            scroll_px = 600
+
+            # JS scroll strategy: target #comments #contents first (the inner
+            # scrollable list), then fall back to the #comments root element,
+            # then to document.documentElement (page body).
+            js_scroll = f"""
+            (px) => {{
+              const containers = [
+                document.querySelector('#comments #contents'),
+                document.querySelector('ytd-comments #contents'),
+                document.querySelector('#comments'),
+                document.querySelector('ytd-comments'),
+              ];
+              for (const el of containers) {{
+                if (el && el.scrollHeight > el.clientHeight) {{
+                  el.scrollBy({{ top: px, behavior: 'smooth' }});
+                  return el.id || el.tagName;
+                }}
+              }}
+              // Fallback: scroll the page body
+              window.scrollBy({{ top: px, behavior: 'smooth' }});
+              return 'body';
+            }}
+            """
+
+            scrolled_via: list[str] = []
             for i in range(steps):
-                actions.scroll(direction="down")
-                logger.debug(f"[{self.name}] scroll_comments(): step {i + 1}/{steps}")
+                container = actions.evaluate_js(f"({js_scroll})({scroll_px})")
+                scrolled_via.append(str(container) if container else "body")
+                logger.debug(
+                    f"[{self.name}] scroll_comments(): step {i + 1}/{steps} via '{container}'"
+                )
 
             logger.info(f"[{self.name}] scroll_comments() ✅ ({steps} scrolls)")
-            return Result.ok(data={"scrolled": steps, "action": "comments_scrolled"})
+            return Result.ok(data={
+                "scrolled": steps,
+                "action": "comments_scrolled",
+                "containers": scrolled_via,
+            })
         except ActionError as e:
             return Result.fail(error=f"scroll_comments(): {e}")
         except Exception as e:

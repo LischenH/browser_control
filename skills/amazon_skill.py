@@ -303,10 +303,45 @@ class AmazonSkill(BaseSkill):
     # SHOPPING ACTIONS
     # ═══════════════════════════════════════════════════════════════════════
 
+    # ── JS helpers for add_to_cart idempotency ────────────────────────────────
+    _JS_IS_ALREADY_IN_CART = """
+    () => {
+      // 1. Confirmation banner already visible (item was just added this session)
+      if (document.querySelector('#NATC_SMART_WAGON_CONF_MSG_SUCCESS')
+       || document.querySelector('#huc-v2-confirm-text')
+       || document.querySelector('#sw-atc-confirmation')
+       || document.querySelector('.a-color-success')) return 'confirmation_visible';
+
+      // 2. Button text changed to "Added to Cart" / "Im Einkaufswagen" / etc.
+      const btn = document.querySelector('#add-to-cart-button')
+               || document.querySelector('input#add-to-cart-button');
+      if (btn) {
+        const label = (btn.value || btn.innerText || btn.getAttribute('aria-label') || '').toLowerCase();
+        if (/added|in(?:\\s+your)?\\s+cart|im\\s+einkaufswagen|ajout/i.test(label))
+          return 'button_label_changed';
+        // 3. Button is disabled after add (some Amazon locales)
+        if (btn.disabled || btn.getAttribute('disabled') !== null) return 'button_disabled';
+      }
+
+      // 4. "Go to Cart" / "Proceed to Checkout" CTA appeared (post-add overlay)
+      if (document.querySelector('#hlb-ptc-btn')
+       || document.querySelector('#sw-gtc')
+       || document.querySelector('#huc-v2-order-row-confirm-text')) return 'goto_cart_visible';
+
+      return null;  // not yet in cart
+    }
+    """
+
     def _action_add_to_cart(self, actions: Actions) -> Result:
         """
         Add the current product to the cart.
         Must be on a product page (/dp/ URL).
+
+        Phase 10.1 (MAJOR-6) — Idempotency checks:
+          1. Pre-click: detect if already-in-cart confirmation is visible.
+          2. Pre-click: detect if the Add-to-Cart button is disabled (already added).
+          3. Pre-click: detect if button label changed to 'Added' / locale equivalent.
+          4. Post-click: verify via confirmation element OR cart count delta.
         """
         logger.info(f"[{self.name}] add_to_cart()")
         try:
@@ -317,12 +352,46 @@ class AmazonSkill(BaseSkill):
                           "Navigate to a product page first."
                 )
 
+            # ── Idempotency pre-check ─────────────────────────────────────────
+            already_reason = actions.evaluate_js(self._JS_IS_ALREADY_IN_CART)
+            if already_reason:
+                logger.info(
+                    f"[{self.name}] add_to_cart(): already in cart "
+                    f"(detected via '{already_reason}') — skipping"
+                )
+                return Result.ok(data={
+                    "added": True,
+                    "action": "skipped_already_in_cart",
+                    "reason": already_reason,
+                })
+
             cart_before = actions.evaluate_js(_JS_GET_CART_COUNT) or 0
 
+            # ── Wait for button and verify it is clickable ─────────────────────
             actions.wait_for(selectors=self._selectors["add_to_cart_button"], timeout=10.0)
+
+            # Extra guard: if the button exists but is already disabled, it is
+            # an "Added" state on some Amazon localizations — treat as idempotent.
+            btn_disabled = actions.evaluate_js("""
+            () => {
+              const btn = document.querySelector('#add-to-cart-button')
+                       || document.querySelector('input#add-to-cart-button');
+              return btn ? (btn.disabled || btn.getAttribute('aria-disabled') === 'true') : false;
+            }
+            """)
+            if btn_disabled:
+                logger.info(
+                    f"[{self.name}] add_to_cart(): button is disabled — "
+                    "item likely already in cart, skipping click"
+                )
+                return Result.ok(data={
+                    "added": True,
+                    "action": "skipped_button_disabled",
+                })
+
             actions.click(selectors=self._selectors["add_to_cart_button"])
 
-            # Wait for cart confirmation (either popup or page reload)
+            # ── Post-click confirmation ───────────────────────────────────────
             added = False
             try:
                 actions.wait_for(
@@ -337,15 +406,24 @@ class AmazonSkill(BaseSkill):
                 )
                 added = True
             except ActionError:
-                # Check if cart count increased
+                # Check if cart count increased as fallback
                 cart_after = actions.evaluate_js(_JS_GET_CART_COUNT) or 0
                 added = cart_after > cart_before
 
             if added:
                 logger.info(f"[{self.name}] add_to_cart() ✅")
-                return Result.ok(data={"added": True, "cart_count": cart_before + 1})
+                return Result.ok(data={"added": True, "action": "added", "cart_count": cart_before + 1})
 
-            # May have been added but no confirmation element found — treat as success
+            # No confirmation found — run idempotency check one more time in
+            # case the post-add state loaded after the wait timed out.
+            post_reason = actions.evaluate_js(self._JS_IS_ALREADY_IN_CART)
+            if post_reason:
+                logger.info(
+                    f"[{self.name}] add_to_cart(): post-click check shows in-cart "
+                    f"('{post_reason}') — treating as success"
+                )
+                return Result.ok(data={"added": True, "action": "added_unverified", "reason": post_reason})
+
             logger.warning(f"[{self.name}] add_to_cart(): no confirmation found — treating as success")
             return Result.ok(data={"added": True, "action": "unverified"})
         except ActionError as e:

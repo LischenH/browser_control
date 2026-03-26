@@ -716,7 +716,8 @@ class _TemplateEngine(_PlannerEngine):
 
 # ── Validation Layer ──────────────────────────────────────────────────────────
 
-#: All allowed action names (must match skill implementations)
+#: All allowed action names (must match skill implementations).
+#: Phase 10.1 (MAJOR-2 + MINOR-11): all Phase 10.1 aliases and new actions added.
 _VALID_ACTIONS: frozenset[str] = frozenset({
     # Core / navigation
     "navigate",
@@ -726,14 +727,23 @@ _VALID_ACTIONS: frozenset[str] = frozenset({
     "read_title",
     "read_result_title",
     "open_top_results",
-    # YouTube — engagement
+    # YouTube — engagement (canonical)
     "like",
     "unlike",
     "subscribe",
     "unsubscribe",
     "save_to_watch_later",
     "remove_from_watch_later",
-    # YouTube — playback
+    # YouTube — engagement aliases (Phase 10.1)
+    "like_video",           # alias: like
+    "unlike_video",         # alias: unlike
+    "like_current",         # natural-language alias: like
+    "subscribe_channel",    # natural-language alias: subscribe
+    # YouTube — Shorts engagement (Phase 10.1)
+    "like_short",
+    "unlike_short",
+    "subscribe_short",
+    # YouTube — playback (canonical)
     "play",
     "pause",
     "toggle_play",
@@ -746,9 +756,16 @@ _VALID_ACTIONS: frozenset[str] = frozenset({
     "set_quality",
     "fullscreen",
     "exit_fullscreen",
-    # YouTube — shorts
+    # YouTube — playback aliases (Phase 10.1)
+    "play_video",           # alias: play
+    "pause_video",          # alias: pause
+    "set_playback_speed",   # alias: set_speed
+    "seek_forward",         # configurable-delta forward seek
+    "seek_backward",        # configurable-delta backward seek
+    # YouTube — Shorts navigation (canonical + alias)
     "next_short",
     "prev_short",
+    "previous_short",       # alias: prev_short
     # YouTube — navigation
     "go_home",
     "go_shorts_home",
@@ -769,6 +786,8 @@ _VALID_ACTIONS: frozenset[str] = frozenset({
     # YouTube — recommended
     "open_recommended",
     "open_top_recommended",
+    # YouTube — comments (Phase 10.1)
+    "scroll_comments",
     # Amazon — original
     "click_first_result",
     "read_product_title",
@@ -844,24 +863,67 @@ class _LLMEngine(_PlannerEngine):
         "You are a browser automation planner.\n"
         "Convert a user goal into a STRICT JSON list of steps.\n"
         "Rules:\n"
-        "* Only allowed actions (see full list in docs):\n"
-        "  navigate, search, click_first_video, click_first_result,\n"
-        "  read_title, read_result_title, read_product_title, open_top_results,\n"
-        "  like, unlike, subscribe, unsubscribe, save_to_watch_later,\n"
-        "  play, pause, toggle_play, set_speed, seek, forward_10s, back_10s,\n"
-        "  toggle_subtitles, toggle_autoplay, set_quality, fullscreen,\n"
-        "  next_short, prev_short, go_home, go_to_channel, go_to_channel_by_name,\n"
-        "  open_comments, next_video, previous_video, play_nth_next,\n"
-        "  open_history, open_liked_videos, open_playlists, open_watch_later,\n"
-        "  add_to_playlist, remove_from_playlist, open_recommended, open_top_recommended,\n"
-        "  add_to_cart, remove_from_cart, add_to_wishlist, buy_now,\n"
-        "  open_orders, open_cart, open_wishlist,\n"
-        "  read_price, read_rating, read_reviews\n"
+        "* Only allowed actions (exact names — no others):\n"
+        "\n"
+        "  CORE:\n"
+        "    navigate\n"
+        "\n"
+        "  YOUTUBE — search & read:\n"
+        "    search, click_first_video, read_title, read_result_title, open_top_results\n"
+        "\n"
+        "  YOUTUBE — engagement (canonical + aliases):\n"
+        "    like, unlike, subscribe, unsubscribe,\n"
+        "    save_to_watch_later, remove_from_watch_later,\n"
+        "    like_video, unlike_video, like_current, subscribe_channel,\n"
+        "    like_short, unlike_short, subscribe_short\n"
+        "\n"
+        "  YOUTUBE — playback (canonical + aliases):\n"
+        "    play, pause, toggle_play,\n"
+        "    set_speed, set_playback_speed,\n"
+        "    seek, seek_forward, seek_backward,\n"
+        "    forward_10s, back_10s,\n"
+        "    toggle_subtitles, toggle_autoplay, set_quality,\n"
+        "    fullscreen, exit_fullscreen,\n"
+        "    play_video, pause_video\n"
+        "\n"
+        "  YOUTUBE — Shorts:\n"
+        "    next_short, prev_short, previous_short\n"
+        "\n"
+        "  YOUTUBE — navigation:\n"
+        "    go_home, go_shorts_home, go_to_channel, go_to_channel_by_name,\n"
+        "    open_comments, scroll_comments,\n"
+        "    next_video, previous_video, play_nth_next\n"
+        "\n"
+        "  YOUTUBE — library:\n"
+        "    open_history, open_liked_videos, open_playlists, open_watch_later\n"
+        "\n"
+        "  YOUTUBE — playlists:\n"
+        "    add_to_playlist, remove_from_playlist\n"
+        "\n"
+        "  YOUTUBE — recommended:\n"
+        "    open_recommended, open_top_recommended\n"
+        "\n"
+        "  AMAZON — search & read:\n"
+        "    click_first_result, read_product_title, read_result_title, open_top_results\n"
+        "\n"
+        "  AMAZON — shopping:\n"
+        "    add_to_cart, remove_from_cart, add_to_wishlist, remove_from_wishlist, buy_now\n"
+        "\n"
+        "  AMAZON — navigation:\n"
+        "    open_orders, open_cart, open_wishlist\n"
+        "\n"
+        "  AMAZON — data:\n"
+        "    read_price, read_rating, read_reviews\n"
+        "\n"
         "* Always include: action_name, url, params, verify_conditions, description\n"
         "* verify_conditions must have url_contains and element_exists\n"
         "* NEVER output text outside JSON\n"
-        "* NEVER hallucinate actions\n"
-        "* On-page actions (like, subscribe, add_to_cart etc.) need NO navigate step"
+        "* NEVER hallucinate actions not listed above\n"
+        "* On-page actions (like, subscribe, add_to_cart, scroll_comments etc.) need NO navigate step\n"
+        "* For \"like this video\": use \"like\" or \"like_video\" — both are valid\n"
+        "* For \"like a short\": use \"like_short\"\n"
+        "* For \"seek forward 30s\": use \"seek_forward\" with params {\"seconds\": 30}\n"
+        "* For \"scroll comments\": use \"scroll_comments\" with params {\"amount\": 3}"
     )
 
     def plan(self, goal: str) -> list[Step]:
