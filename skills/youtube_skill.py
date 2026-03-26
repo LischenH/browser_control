@@ -1160,29 +1160,86 @@ class YouTubeSkill(BaseSkill):
             return Result.fail(error=f"open_comments(): {type(e).__name__}: {e}")
 
     def _action_next_video(self, actions: Actions) -> Result:
-        """Click the 'Next video' button in the player."""
+        """
+        Navigate to the next video.
+
+        Priority:
+          1. Player next button (.ytp-next-button) — works in playlists and
+             when autoplay is enabled and the next video is queued.
+          2. First recommended sidebar video — fallback for standalone videos
+             that have no player next button (autoplay off, no playlist).
+        """
         logger.info(f"[{self.name}] next_video()")
         try:
-            actions.wait_for(selectors=self._selectors["next_button"], timeout=10.0)
-            actions.click_and_wait(selectors=self._selectors["next_button"])
-            final_url = actions._page.url  # noqa: SLF001
-            logger.info(f"[{self.name}] next_video() ✅ url={final_url}")
-            return Result.ok(data={"url": final_url})
+            # Step 1: Try the player next button (short timeout — it's either there or not)
+            try:
+                actions.wait_for(selectors=self._selectors["next_button"], timeout=4.0)
+                actions.click_and_wait(selectors=self._selectors["next_button"])
+                final_url = actions._page.url  # noqa: SLF001
+                logger.info(f"[{self.name}] next_video() ✅ via next_button url={final_url}")
+                return Result.ok(data={"url": final_url, "method": "next_button"})
+            except ActionError:
+                pass  # Fall through to sidebar
+
+            # Step 2: Sidebar recommended — first result
+            logger.info(f"[{self.name}] next_video(): next_button not found — trying sidebar")
+            links = actions.evaluate_js(f"({_JS_GET_RECOMMENDED_LINKS})(3)")
+            if links:
+                href = links[0]
+                url = href if href.startswith("http") else f"https://www.youtube.com{href}"
+                actions.navigate(url)
+                final_url = actions._page.url  # noqa: SLF001
+                logger.info(f"[{self.name}] next_video() ✅ via sidebar url={final_url}")
+                return Result.ok(data={"url": final_url, "method": "sidebar"})
+
+            return Result.fail(
+                error="next_video(): no next button and no recommended videos found in sidebar"
+            )
         except ActionError as e:
             return Result.fail(error=f"next_video(): {e}")
         except Exception as e:
             return Result.fail(error=f"next_video(): {type(e).__name__}: {e}")
 
     def _action_previous_video(self, actions: Actions) -> Result:
-        """Go back to the previous video (browser history)."""
+        """
+        Go to the previous video in a playlist.
+
+        Strategy:
+          Only operates when URL contains 'list=' (playlist context).
+          Clicks the player's prev button in that case.
+
+          history.back() is intentionally removed — it silently navigates
+          to non-video pages (search results, home) when there is no real
+          video history, making the action unpredictable.
+        """
         logger.info(f"[{self.name}] previous_video()")
         try:
-            actions.evaluate_js("() => history.back()")
-            from core.actions import wait_for_page_ready
-            wait_for_page_ready(actions._page)  # noqa: SLF001
-            final_url = actions._page.url  # noqa: SLF001
-            logger.info(f"[{self.name}] previous_video() ✅ url={final_url}")
-            return Result.ok(data={"url": final_url})
+            current_url = actions._page.url  # noqa: SLF001
+
+            if "list=" in current_url:
+                prev_selectors = [
+                    ".ytp-prev-button",
+                    "a.ytp-prev-button",
+                    "button[aria-label='Previous (SHIFT+p)']",
+                    "a[aria-label='Previous']",
+                ]
+                try:
+                    actions.wait_for(selectors=prev_selectors, timeout=5.0)
+                    actions.click_and_wait(selectors=prev_selectors)
+                    final_url = actions._page.url  # noqa: SLF001
+                    logger.info(f"[{self.name}] previous_video() ✅ url={final_url}")
+                    return Result.ok(data={"url": final_url, "method": "prev_button"})
+                except ActionError:
+                    return Result.fail(
+                        error="previous_video(): in playlist but no prev button found "
+                              "(may already be at first video)"
+                    )
+
+            return Result.fail(
+                error="previous_video(): only available inside a playlist "
+                      "(URL must contain 'list='). "
+                      "For general back navigation use browser history directly."
+            )
         except ActionError as e:
             return Result.fail(error=f"previous_video(): {e}")
         except Exception as e:
