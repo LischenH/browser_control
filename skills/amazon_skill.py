@@ -159,7 +159,9 @@ class AmazonSkill(BaseSkill):
             # ── Original actions ──────────────────────────────────────────────
             "search":                self._action_search,
             "click_first_result":    self._action_click_first_result,
-            "read_result_title":     self._action_read_result_title,
+            # read_result_title removed (D4): redundant on Amazon — search results
+            # are immediately navigated away from; read_product_title on the product
+            # page is sufficient and avoids an extra DOM wait on the results page.
             "read_product_title":    self._action_read_product_title,
             "open_top_results":      self._action_open_top_results,
             # ── Shopping ─────────────────────────────────────────────────────

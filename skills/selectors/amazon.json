@@ -16,8 +16,7 @@
   "result_item": [
     "div[data-component-type='s-search-result']",
     "div.s-result-item[data-asin]",
-    "div.s-result-item",
-    "div.sg-col-inner .s-card-container"
+    "div.s-result-item"
   ],
   "first_result_link": [
     "div[data-component-type='s-search-result'][data-asin]:not([data-asin='']) h2 a.a-link-normal",
@@ -33,8 +32,7 @@
     "div[data-component-type='s-search-result'] h2 span",
     "div[data-component-type='s-search-result'] .a-size-base-plus",
     "div[data-component-type='s-search-result'] .a-size-medium",
-    "div.s-result-item h2 span",
-    "h2.a-size-mini span"
+    "div.s-result-item h2 span"
   ],
   "product_title": [
     "#productTitle",
@@ -46,9 +44,7 @@
   "add_to_cart_button": [
     "#add-to-cart-button",
     "input#add-to-cart-button",
-    "input[name='submit.add-to-cart']",
-    "#submit\\.add-to-cart",
-    "button[id='add-to-cart-button']"
+    "input[name='submit.add-to-cart']"
   ],
   "go_to_cart_button": [
     "#hlb-ptc-btn",
@@ -64,7 +60,6 @@
   ],
   "wishlist_button": [
     "#add-to-wishlist-button-submit",
-    "#addToWishlist-bb",
     "input#add-to-wishlist-button-submit",
     "span[id*='wishlist'] input[type='submit']",
     "button[aria-label*='Add to List']"
@@ -108,13 +103,12 @@
   ],
 
   "_comment_product": "Product page data selectors.",
+  "_comment_price": "Price selectors ordered new → old. Older priceblock_* IDs removed (deprecated 2021).",
   "price_selector": [
     ".a-price .a-offscreen",
     "#corePrice_feature_div .a-price",
     "#price_inside_buybox",
-    "span.a-price-whole",
-    "#priceblock_ourprice",
-    "#priceblock_dealprice"
+    "span.a-price-whole"
   ],
   "rating_selector": [
     "#averageCustomerReviews #acrPopover",
