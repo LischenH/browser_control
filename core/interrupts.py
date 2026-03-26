@@ -45,6 +45,11 @@ logger = logging.getLogger(__name__)
 
 # Priority 1 — Blocking overlays & modals
 # These sit on top of everything else and must be cleared first.
+# SAFETY: Only ARIA close/dismiss labels are used here.
+# Removed: button:has-text("OK"), button:has-text("Okay"),
+#          button:has-text("Confirm"), button:has-text("Continue")
+# These are too generic and would dismiss legitimate confirmation dialogs
+# (e.g. Amazon checkout, form submissions, delete confirmations).
 _OVERLAY_SELECTORS: list[str] = [
     # Generic ARIA close buttons
     "button[aria-label='Close']",

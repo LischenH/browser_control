@@ -55,11 +55,12 @@
     "a[href='/cart']",
     "#sw-gtc .a-button-text"
   ],
+  "_comment_remove_from_cart": "Attribute-based selectors first for UI-change resilience; value-based English fallback last.",
   "remove_from_cart_button": [
     "input[data-action='delete']",
     ".sc-action-delete input",
-    "input[value='Delete']",
-    "a[data-action='delete']"
+    "a[data-action='delete']",
+    "input[value='Delete']"
   ],
   "wishlist_button": [
     "#add-to-wishlist-button-submit",
@@ -74,7 +75,8 @@
     "input[name='submit.add-to-list']"
   ],
   "remove_from_wishlist_button": [
-    ".wl-item-view a[data-action*='delete']"
+    ".wl-item-view a[data-action*='delete']",
+    "a[data-action*='delete']"
   ],
   "buy_now_button": [
     "#buy-now-button",
