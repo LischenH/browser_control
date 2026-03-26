@@ -76,7 +76,9 @@
   ],
   "remove_from_wishlist_button": [
     ".wl-item-view a[data-action*='delete']",
-    "a[data-action*='delete']"
+    ".wl-item-view input[data-action*='delete']",
+    "[id*='item_'] a[data-action*='delete']",
+    "span.wl-item-view a[data-action*='delete']"
   ],
   "buy_now_button": [
     "#buy-now-button",

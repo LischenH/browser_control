@@ -182,14 +182,14 @@
     "button[aria-label*='CC']"
   ],
   "autoplay_toggle": [
-    "ytd-compact-autoplay-renderer #toggleButton",
-    "ytd-compact-autoplay-renderer button",
     ".ytp-autonav-toggle-button",
     "button.ytp-autonav-toggle-button",
-    "button[aria-label*='Autoplay']",
-    "button[aria-label*='autoplay' i]",
     "[data-ytac-toggle-enabled]",
-    ".ytd-compact-autoplay-renderer button"
+    "ytd-compact-autoplay-renderer #toggleButton",
+    "ytd-compact-autoplay-renderer button",
+    ".ytd-compact-autoplay-renderer button",
+    "button[aria-label*='Autoplay']",
+    "button[aria-label*='autoplay' i]"
   ],
 
   "_comment_navigation": "Navigation buttons and links.",

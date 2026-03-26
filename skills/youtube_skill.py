@@ -866,9 +866,21 @@ class YouTubeSkill(BaseSkill):
             actions.click(selectors=self._selectors["settings_button"])
             actions.wait_for(selectors=self._selectors["settings_menu"], timeout=5.0)
 
-            # Step 2: Click quality menu item (usually last item in settings)
-            actions.wait_for(selectors=self._selectors["quality_menu_item"], timeout=5.0)
-            actions.click(selectors=self._selectors["quality_menu_item"])
+            # Step 2: Click quality menu item via JS (locale-safe).
+            # Quality is always the LAST item in the YTP settings panel —
+            # using aria-label*='Quality' would break on German/French/etc.
+            quality_panel_opened = actions.evaluate_js("""
+            () => {
+              const items = document.querySelectorAll('.ytp-panel-menu .ytp-menuitem');
+              if (!items.length) return false;
+              items[items.length - 1].click();
+              return true;
+            }
+            """)
+            if not quality_panel_opened:
+                # Fallback: selector-based (may fail on non-English UI)
+                actions.wait_for(selectors=self._selectors["quality_menu_item"], timeout=5.0)
+                actions.click(selectors=self._selectors["quality_menu_item"])
 
             # Step 3: Wait for quality submenu and find target quality
             actions.wait_for(selectors=self._selectors["quality_panel_items"], timeout=5.0)
