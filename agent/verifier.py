@@ -181,6 +181,9 @@ class Verifier:
         for key, value in conditions.items():
             handler = self._CONDITION_HANDLERS.get(key)
             if handler is None:
+                # Phase B: unknown keys MUST NOT hard-fail — warn + skip (pass-through).
+                # Rationale: new condition keys may be added by callers without updating
+                # the verifier; a hard-fail would silently abort correct plans.
                 logger.warning(
                     f"[Verifier] Unbekannter Condition-Key: '{key}' — wird übersprungen. "
                     f"Bekannte Keys: {list(self._CONDITION_HANDLERS.keys())}"
@@ -189,15 +192,11 @@ class Verifier:
                     "condition": key,
                     "expected": value,
                     "actual": "—",
-                    "passed": False,
+                    "passed": True,          # treated as pass-through — non-blocking
                     "transient": False,
-                    "note": f"Unbekannter Condition-Key '{key}'. Nicht implementiert.",
+                    "note": f"Unbekannter Condition-Key '{key}' — übersprungen (kein Handler).",
                 }
-                return VerifyResult(
-                    status="fail",
-                    reason=f"Unbekannter Condition-Key: '{key}'",
-                    details=details,
-                )
+                continue   # skip; do not abort the plan
 
             check = self._run_with_retry(key, handler, value)
             details[key] = check.to_dict()
@@ -361,7 +360,7 @@ class Verifier:
             expected=expected_url,
             actual=current_url,
             passed=passed,
-            transient=False,
+            transient=not passed,   # Phase B: failure is transient; redirect may still be completing
             note="" if passed else f"URL '{current_url}' ≠ '{expected_url}'.",
         )
 
@@ -384,6 +383,19 @@ class Verifier:
         """
         if isinstance(selectors, str):
             selectors = [selectors]
+
+        # Phase B: filter empty/whitespace selectors — they produce invalid CSS
+        # like "sel1, , sel2" which Playwright rejects, masking the real error.
+        selectors = [s for s in selectors if s and s.strip()]
+        if not selectors:
+            return _CheckDetail(
+                condition=key,
+                expected=selectors,
+                actual=None,
+                passed=False,
+                transient=False,
+                note="Alle übergebenen Selektoren sind leer oder ungültig.",
+            )
 
         # Race all selectors simultaneously using a CSS comma-union.
         # The full timeout is shared — if any selector is already visible it

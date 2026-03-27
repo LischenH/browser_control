@@ -747,24 +747,50 @@ class Actions:
         t = timeout if timeout is not None else config.DEFAULT_TIMEOUT
         logger.info(f"[wait_for] Warte auf Selektoren: {selectors} (timeout={t}s)")
 
+        # Phase B: filter empty/whitespace entries — they produce invalid CSS
+        # like "sel1, , sel2" which Playwright rejects, masking the real error.
+        valid_selectors = [s for s in selectors if s and s.strip()]
+        if not valid_selectors:
+            raise ActionError(
+                f"[wait_for] Selector-Liste ist leer oder enthält nur ungültige Einträge: {selectors}"
+            )
+
         # Race all selectors simultaneously with a CSS comma-union selector.
         # Playwright's wait_for_selector resolves as soon as ANY of them matches.
-        combined = ", ".join(selectors)
-        try:
-            self._page.wait_for_selector(
-                combined,
-                state="visible",
-                timeout=int(t * 1000),
-            )
-        except PlaywrightTimeoutError as exc:
+        combined = ", ".join(valid_selectors)
+
+        # Phase B: fallback logic — attempt full timeout first, then one retry
+        # with a shorter fallback timeout to handle transient DOM fluctuations
+        # (e.g. React re-renders) without adding a static sleep.
+        last_exc: Exception | None = None
+        for _pass, pass_timeout_ms in enumerate(
+            (int(t * 1000), max(500, int(t * 300)))
+        ):
+            try:
+                self._page.wait_for_selector(
+                    combined,
+                    state="visible",
+                    timeout=pass_timeout_ms,
+                )
+                last_exc = None
+                break  # found — exit retry loop
+            except PlaywrightTimeoutError as exc:
+                last_exc = exc
+                if _pass == 0:
+                    logger.debug(
+                        f"[wait_for] Pass 1 timeout ({t}s) — retrying with "
+                        f"fallback {pass_timeout_ms // 1000}s: {valid_selectors}"
+                    )
+
+        if last_exc is not None:
             raise ActionError(
-                f"[wait_for] None of {len(selectors)} selectors appeared "
-                f"within {t}s: {selectors}\n  {exc}"
+                f"[wait_for] None of {len(valid_selectors)} selectors appeared "
+                f"within {t}s (+ fallback): {valid_selectors}\n  {last_exc}"
             )
 
         # Identify the winning selector (first one currently visible)
-        winning = selectors[0]  # fallback if none individually match (shouldn't happen)
-        for sel in selectors:
+        winning = valid_selectors[0]  # fallback if none individually match (shouldn't happen)
+        for sel in valid_selectors:
             try:
                 if self._page.is_visible(sel):
                     winning = sel
