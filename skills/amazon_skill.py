@@ -347,7 +347,7 @@ class AmazonSkill(BaseSkill):
         """
         logger.info(f"[{self.name}] add_to_cart()")
         try:
-            is_product = actions.evaluate_js(_JS_IS_PRODUCT_PAGE)
+            is_product = actions.safe_evaluate_js(_JS_IS_PRODUCT_PAGE, default=False)
             if not is_product:
                 return Result.fail(
                     error="add_to_cart(): not on a product page. "
@@ -355,7 +355,7 @@ class AmazonSkill(BaseSkill):
                 )
 
             # ── Idempotency pre-check ─────────────────────────────────────────
-            already_reason = actions.evaluate_js(self._JS_IS_ALREADY_IN_CART)
+            already_reason = actions.safe_evaluate_js(self._JS_IS_ALREADY_IN_CART, default=None)
             if already_reason:
                 logger.info(
                     f"[{self.name}] add_to_cart(): already in cart "
@@ -367,20 +367,20 @@ class AmazonSkill(BaseSkill):
                     "reason": already_reason,
                 })
 
-            cart_before = actions.evaluate_js(_JS_GET_CART_COUNT) or 0
+            cart_before = actions.safe_evaluate_js(_JS_GET_CART_COUNT, default=0) or 0
 
             # ── Wait for button and verify it is clickable ─────────────────────
             actions.wait_for(selectors=self._selectors["add_to_cart_button"], timeout=10.0)
 
             # Extra guard: if the button exists but is already disabled, it is
             # an "Added" state on some Amazon localizations — treat as idempotent.
-            btn_disabled = actions.evaluate_js("""
+            btn_disabled = actions.safe_evaluate_js("""
             () => {
               const btn = document.querySelector('#add-to-cart-button')
                        || document.querySelector('input#add-to-cart-button');
               return btn ? (btn.disabled || btn.getAttribute('aria-disabled') === 'true') : false;
             }
-            """)
+            """, default=False)
             if btn_disabled:
                 logger.info(
                     f"[{self.name}] add_to_cart(): button is disabled — "
@@ -409,7 +409,7 @@ class AmazonSkill(BaseSkill):
                 added = True
             except ActionError:
                 # Check if cart count increased as fallback
-                cart_after = actions.evaluate_js(_JS_GET_CART_COUNT) or 0
+                cart_after = actions.safe_evaluate_js(_JS_GET_CART_COUNT, default=0) or 0
                 added = cart_after > cart_before
 
             if added:
@@ -418,7 +418,7 @@ class AmazonSkill(BaseSkill):
 
             # No confirmation found — run idempotency check one more time in
             # case the post-add state loaded after the wait timed out.
-            post_reason = actions.evaluate_js(self._JS_IS_ALREADY_IN_CART)
+            post_reason = actions.safe_evaluate_js(self._JS_IS_ALREADY_IN_CART, default=None)
             if post_reason:
                 logger.info(
                     f"[{self.name}] add_to_cart(): post-click check shows in-cart "
@@ -440,7 +440,7 @@ class AmazonSkill(BaseSkill):
         """
         logger.info(f"[{self.name}] remove_from_cart()")
         try:
-            is_cart = actions.evaluate_js(_JS_IS_CART_PAGE)
+            is_cart = actions.safe_evaluate_js(_JS_IS_CART_PAGE, default=False)
             if not is_cart:
                 # Navigate to cart first
                 actions.navigate(
@@ -469,7 +469,7 @@ class AmazonSkill(BaseSkill):
         """
         logger.info(f"[{self.name}] add_to_wishlist()")
         try:
-            is_product = actions.evaluate_js(_JS_IS_PRODUCT_PAGE)
+            is_product = actions.safe_evaluate_js(_JS_IS_PRODUCT_PAGE, default=False)
             if not is_product:
                 return Result.fail(
                     error="add_to_wishlist(): not on a product page. "
@@ -515,7 +515,7 @@ class AmazonSkill(BaseSkill):
         """
         logger.info(f"[{self.name}] remove_from_wishlist()")
         try:
-            is_wl = actions.evaluate_js(_JS_IS_WISHLIST_PAGE)
+            is_wl = actions.safe_evaluate_js(_JS_IS_WISHLIST_PAGE, default=False)
             if not is_wl:
                 # Navigate to wishlist
                 base = _amazon_base(actions._page.url)  # noqa: SLF001
@@ -546,7 +546,7 @@ class AmazonSkill(BaseSkill):
             logger.warning(f"[{self.name}] buy_now() blocked — BUY_NOW_ENABLED is False")
             return Result.fail("buy_now disabled by config")
         try:
-            is_product = actions.evaluate_js(_JS_IS_PRODUCT_PAGE)
+            is_product = actions.safe_evaluate_js(_JS_IS_PRODUCT_PAGE, default=False)
             if not is_product:
                 return Result.fail(
                     error="buy_now(): not on a product page. "

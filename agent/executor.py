@@ -427,11 +427,19 @@ class Executor:
 
         for attempt in range(1, self._max_retries + 1):
             if attempt > 1:
+                # Compute delay: exponential backoff when enabled, flat otherwise.
+                # Backoff: RETRY_DELAY * 2^(attempt-1), capped at 2.0s.
+                # Flat:    RETRY_DELAY on every retry (default, fast-SPA friendly).
+                if config.RETRY_BACKOFF:
+                    delay = min(config.RETRY_DELAY * (2 ** (attempt - 1)), 2.0)
+                else:
+                    delay = config.RETRY_DELAY
                 logger.info(
-                    "[Executor]   Retry %d/%d for '%s' (after %.2fs)",
-                    attempt, self._max_retries, step.action_name, config.RETRY_DELAY,
+                    "[Executor]   Retry %d/%d for '%s' (after %.3fs%s)",
+                    attempt, self._max_retries, step.action_name, delay,
+                    " backoff" if config.RETRY_BACKOFF else "",
                 )
-                time.sleep(config.RETRY_DELAY)
+                time.sleep(delay)
 
             # Execute action
             logger.info(

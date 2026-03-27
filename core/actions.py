@@ -1067,6 +1067,110 @@ class Actions:
                 f"{type(exc).__name__}: {exc}"
             ) from exc
 
+    def safe_evaluate_js(
+        self,
+        script: str,
+        default: any = None,
+        page: Optional[Page] = None,
+    ) -> any:
+        """
+        Non-raising JavaScript evaluation — returns `default` on any error.
+
+        Drawn from the browser_automation reference system (_safe_js pattern in
+        MakerWorldController). Use this for idempotency / state checks where a
+        JS error should be treated as "unknown" rather than aborting execution.
+
+        Examples:
+            is_liked = actions.safe_evaluate_js(JS_IS_LIKED, default=False)
+            cart_count = actions.safe_evaluate_js(JS_GET_CART_COUNT, default=0)
+
+        Args:
+            script:  JavaScript expression or arrow-function string.
+            default: Value to return if evaluation fails (default: None).
+            page:    Optional explicit Page; falls back to self._page.
+
+        Returns:
+            The JS return value, or `default` on any exception.
+        """
+        try:
+            return self.evaluate_js(script, page=page)
+        except ActionError as exc:
+            logger.debug(
+                "[safe_evaluate_js] Non-fatal JS error (returning default=%r): %s",
+                default, exc,
+            )
+            return default
+        except Exception as exc:
+            logger.debug(
+                "[safe_evaluate_js] Unexpected error (returning default=%r): %s: %s",
+                default, type(exc).__name__, exc,
+            )
+            return default
+
+    def scroll_container(
+        self,
+        selector: str,
+        amount: int = 300,
+        direction: str = "down",
+    ) -> None:
+        """
+        Scroll a specific DOM container by CSS selector.
+
+        Drawn from the browser_automation reference system (DOMController.
+        scroll_element pattern). Useful for scrolling inner scrollable panels
+        (e.g. YouTube comments list, Amazon review section, MakerWorld sidebar)
+        independently from the main window scroll.
+
+        Falls back to window.scrollBy() if the selector matches no element or
+        the element is not scrollable.
+
+        Args:
+            selector:  CSS selector for the scrollable container element.
+            amount:    Pixel distance to scroll (default: 300).
+            direction: "down" (default) | "up" | "right" | "left".
+
+        Raises:
+            ActionError: if JS evaluation itself fails fatally.
+        """
+        # TAB FOCUS GUARANTEE + interrupt check before container scroll.
+        self._ensure_tab_focus()
+        self._handle_interrupts()
+
+        delta_x, delta_y = 0, 0
+        if direction == "down":
+            delta_y = amount
+        elif direction == "up":
+            delta_y = -amount
+        elif direction == "right":
+            delta_x = amount
+        elif direction == "left":
+            delta_x = -amount
+        else:
+            raise ValueError(
+                f"[scroll_container] Unknown direction: '{direction}'. "
+                "Allowed: up, down, left, right"
+            )
+
+        escaped = selector.replace("'", "\\'")
+        js = f"""
+        (function() {{
+            const el = document.querySelector('{escaped}');
+            if (el && el.scrollHeight > el.clientHeight) {{
+                el.scrollBy({delta_x}, {delta_y});
+                return true;
+            }}
+            // Fallback: page-level scroll
+            window.scrollBy({delta_x}, {delta_y});
+            return false;
+        }})()
+        """.strip()
+        result = self.safe_evaluate_js(js, default=False)
+        logger.info(
+            "[scroll_container] selector='%s' dir='%s' amount=%dpx %s",
+            selector, direction, amount,
+            "(container)" if result else "(window fallback)",
+        )
+
     def evaluate_js(self, script: str, page: Optional[Page] = None) -> any:
         """
         Evaluates a JavaScript expression on the given page (or self._page).

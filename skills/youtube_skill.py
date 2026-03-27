@@ -540,7 +540,7 @@ class YouTubeSkill(BaseSkill):
         """Like the current video or short. Idempotent — skips if already liked."""
         logger.info(f"[{self.name}] like()")
         try:
-            is_liked = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
             if is_liked is True:
                 logger.info(f"[{self.name}] like(): already liked — skipping")
                 return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
@@ -548,7 +548,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=self._selectors["like_button"], timeout=10.0)
             actions.click(selectors=self._selectors["like_button"])
 
-            is_liked_after = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
             if is_liked_after:
                 logger.info(f"[{self.name}] like() ✅")
                 return Result.ok(data={"liked": True, "action": "liked"})
@@ -562,7 +562,7 @@ class YouTubeSkill(BaseSkill):
         """Remove like from current video. Idempotent."""
         logger.info(f"[{self.name}] unlike()")
         try:
-            is_liked = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked is False or is_liked is None:
                 logger.info(f"[{self.name}] unlike(): not liked — skipping")
                 return Result.ok(data={"liked": False, "action": "skipped_not_liked"})
@@ -571,7 +571,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=self._selectors["like_button"], timeout=10.0)
             actions.click(selectors=self._selectors["like_button"])
 
-            is_liked_after = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=True)
             if not is_liked_after:
                 logger.info(f"[{self.name}] unlike() ✅")
                 return Result.ok(data={"liked": False, "action": "unliked"})
@@ -585,7 +585,7 @@ class YouTubeSkill(BaseSkill):
         """Subscribe to the current channel. Idempotent — skips if already subscribed."""
         logger.info(f"[{self.name}] subscribe()")
         try:
-            is_subbed = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            is_subbed = actions.safe_evaluate_js(_JS_IS_SUBSCRIBED, default=None)
             if is_subbed is True:
                 logger.info(f"[{self.name}] subscribe(): already subscribed — skipping")
                 return Result.ok(data={"subscribed": True, "action": "skipped_already_subscribed"})
@@ -593,7 +593,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=self._selectors["subscribe_button"], timeout=10.0)
             actions.click(selectors=self._selectors["subscribe_button"])
 
-            is_subbed_after = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            is_subbed_after = actions.safe_evaluate_js(_JS_IS_SUBSCRIBED, default=None)
             if is_subbed_after:
                 logger.info(f"[{self.name}] subscribe() ✅")
                 return Result.ok(data={"subscribed": True, "action": "subscribed"})
@@ -608,7 +608,7 @@ class YouTubeSkill(BaseSkill):
         """Unsubscribe from the current channel. Idempotent."""
         logger.info(f"[{self.name}] unsubscribe()")
         try:
-            is_subbed = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            is_subbed = actions.safe_evaluate_js(_JS_IS_SUBSCRIBED, default=None)
             if is_subbed is False or is_subbed is None:
                 logger.info(f"[{self.name}] unsubscribe(): not subscribed — skipping")
                 return Result.ok(data={"subscribed": False, "action": "skipped_not_subscribed"})
@@ -670,8 +670,8 @@ class YouTubeSkill(BaseSkill):
         # Wait for the playlist popup/panel
         actions.wait_for(selectors=self._selectors["watch_later_item"], timeout=8.0)
 
-        # Check current state
-        current_state = actions.evaluate_js(_JS_IS_WATCH_LATER_SAVED)
+        # Check current state (safe: returns None if JS errors — treated as unknown)
+        current_state = actions.safe_evaluate_js(_JS_IS_WATCH_LATER_SAVED, default=None)
 
         if current_state == should_be_saved:
             # Already in correct state — close and return
@@ -1381,7 +1381,7 @@ class YouTubeSkill(BaseSkill):
         actions.wait_for(selectors=self._selectors["playlist_menu"], timeout=8.0)
 
         # Find the target playlist by name
-        item_index = actions.evaluate_js(f"({_JS_FIND_PLAYLIST_ITEM})({name!r})")
+        item_index = actions.safe_evaluate_js(f"({_JS_FIND_PLAYLIST_ITEM})({name!r})", default=-1)
         if item_index == -1:
             actions.press_key("Escape")
             return Result.fail(
@@ -1390,7 +1390,7 @@ class YouTubeSkill(BaseSkill):
             )
 
         # Check current state
-        is_checked = actions.evaluate_js(f"({_JS_GET_PLAYLIST_CHECKED})({item_index})")
+        is_checked = actions.safe_evaluate_js(f"({_JS_GET_PLAYLIST_CHECKED})({item_index})", default=None)
 
         if is_checked == should_be_checked:
             actions.press_key("Escape")
@@ -1558,7 +1558,7 @@ class YouTubeSkill(BaseSkill):
         logger.info(f"[{self.name}] like_short()")
         try:
             # Check current state first
-            is_liked = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
             if is_liked is True:
                 logger.info(f"[{self.name}] like_short(): already liked — skipping")
                 return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
@@ -1571,7 +1571,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=like_selectors, timeout=10.0)
             actions.click(selectors=like_selectors)
 
-            is_liked_after = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
             if is_liked_after:
                 logger.info(f"[{self.name}] like_short() ✅")
                 return Result.ok(data={"liked": True, "action": "liked"})
@@ -1591,7 +1591,7 @@ class YouTubeSkill(BaseSkill):
         """
         logger.info(f"[{self.name}] unlike_short()")
         try:
-            is_liked = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked is False or is_liked is None:
                 logger.info(f"[{self.name}] unlike_short(): not liked — skipping")
                 return Result.ok(data={"liked": False, "action": "skipped_not_liked"})
@@ -1604,7 +1604,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=like_selectors, timeout=10.0)
             actions.click(selectors=like_selectors)
 
-            is_liked_after = actions.evaluate_js(_JS_IS_LIKED)
+            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=True)
             if not is_liked_after:
                 logger.info(f"[{self.name}] unlike_short() ✅")
                 return Result.ok(data={"liked": False, "action": "unliked"})
@@ -1626,7 +1626,7 @@ class YouTubeSkill(BaseSkill):
         """
         logger.info(f"[{self.name}] subscribe_short()")
         try:
-            is_subbed = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            is_subbed = actions.safe_evaluate_js(_JS_IS_SUBSCRIBED, default=None)
             if is_subbed is True:
                 logger.info(f"[{self.name}] subscribe_short(): already subscribed — skipping")
                 return Result.ok(data={"subscribed": True, "action": "skipped_already_subscribed"})
@@ -1638,7 +1638,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=sub_selectors, timeout=10.0)
             actions.click(selectors=sub_selectors)
 
-            is_subbed_after = actions.evaluate_js(_JS_IS_SUBSCRIBED)
+            is_subbed_after = actions.safe_evaluate_js(_JS_IS_SUBSCRIBED, default=None)
             if is_subbed_after:
                 logger.info(f"[{self.name}] subscribe_short() ✅")
                 return Result.ok(data={"subscribed": True, "action": "subscribed"})

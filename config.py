@@ -28,6 +28,12 @@ RETRY_DELAY: float = 0.05
 # Gilt pro Selector-Versuch, nicht pro gesamte Selector-Liste.
 MAX_RETRIES: int = 3
 
+# Exponential backoff for Executor retry delays.
+# False (default): flat RETRY_DELAY on every attempt — good for fast SPAs.
+# True:  delay grows as  RETRY_DELAY * 2^(attempt-1), capped at 2.0s.
+#        Useful for rate-limited or slow CDN-heavy pages (e.g. MakerWorld).
+RETRY_BACKOFF: bool = False
+
 # ─── Logging ──────────────────────────────────────────────────────────────────
 # "DEBUG"   → alles (jeder Selector-Versuch, jede Retry-Runde)
 # "INFO"    → Erfolge + Fehler
