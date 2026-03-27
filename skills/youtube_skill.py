@@ -146,15 +146,56 @@ _JS_IS_LIKED = """
 
 _JS_IS_SUBSCRIBED = """
 () => {
-  const el = document.querySelector('#subscribe-button')
-          || document.querySelector('yt-subscribe-button-view-model')
-          || document.querySelector('ytd-subscribe-button-renderer');
-  if (!el) return null;
-  const btn = el.querySelector('button');
+  // Try all known subscribe-button container selectors in priority order.
+  // State detection is LOCALE-INDEPENDENT: uses aria-pressed and
+  // YouTube design-system CSS classes only — no text or label content.
+  const containers = [
+    '#subscribe-button',
+    'yt-subscribe-button-view-model',
+    'ytd-subscribe-button-renderer',
+    'ytd-watch-metadata yt-subscribe-button-view-model',
+  ];
+  for (const sel of containers) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    const btn = el.querySelector('button');
+    if (!btn) continue;
+
+    // 1. aria-pressed (spec-compliant, locale-independent)
+    const pressed = btn.getAttribute('aria-pressed');
+    if (pressed === 'true')  return true;
+    if (pressed === 'false') return false;
+
+    // 2. YouTube design-system button shape classes:
+    //    tonal = subscribed (filled with accent colour)
+    //    filled = not yet subscribed
+    if (btn.classList.contains('yt-spec-button-shape--tonal'))  return true;
+    if (btn.classList.contains('yt-spec-button-shape--filled')) return false;
+
+    // Found the button but cannot determine state — stop searching.
+    return null;
+  }
+  return null;  // no subscribe button found on this page
+}
+"""
+
+_JS_GET_AUTOPLAY_STATE = """
+() => {
+  // Read autoplay on/off state from the player toggle button.
+  // Uses aria-checked (spec-compliant) with a fallback to aria-pressed.
+  // Returns true (on) / false (off) / null (not found or unknown).
+  const btn = document.querySelector('button.ytp-autonav-toggle-button')
+           || document.querySelector('.ytp-autonav-toggle-button')
+           || document.querySelector('ytd-compact-autoplay-renderer button');
   if (!btn) return null;
-  if (btn.getAttribute('aria-pressed') === 'true') return true;
-  if (btn.classList.contains('yt-spec-button-shape--tonal')) return true;
-  return false;
+  const checked = btn.getAttribute('aria-checked');
+  if (checked === 'true')  return true;
+  if (checked === 'false') return false;
+  // Fallback: some YouTube builds use aria-pressed instead
+  const pressed = btn.getAttribute('aria-pressed');
+  if (pressed === 'true')  return true;
+  if (pressed === 'false') return false;
+  return null;
 }
 """
 

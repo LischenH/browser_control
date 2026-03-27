@@ -62,8 +62,12 @@
     "#add-to-wishlist-button-submit",
     "input#add-to-wishlist-button-submit",
     "span[id*='wishlist'] input[type='submit']",
-    "button[aria-label*='Add to List']"
+    "input[name*='submit.add-to-list']",
+    "[data-feature-id*='wishlist'] input[type='submit']",
+    "[data-feature-id*='wishlist'] button",
+    "span[id*='wl-icon-btn'] input"
   ],
+  "_comment_wishlist_button": "Removed button[aria-label*='Add to List'] — English-only, breaks on amazon.de. All replacements use ID/data-feature-id/name attributes — locale-independent.",
   "wishlist_confirm_button": [
     "#add-to-list-submit",
     "#huc-wl-confirm-button",

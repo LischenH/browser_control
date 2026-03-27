@@ -117,12 +117,15 @@
 
   "_comment_save": "Save / watch-later / playlist buttons.",
   "save_button": [
-    "button[aria-label='Save to playlist']",
-    "#actions ytd-button-renderer button[aria-label*='Save']",
-    "ytd-menu-renderer ytd-button-renderer:last-of-type button",
     ".YtSaveButtonPlaceholderHost button",
-    "ytd-button-renderer[id*='save'] button"
+    "ytd-button-renderer[id*='save'] button",
+    "#actions ytd-button-renderer button[aria-label]",
+    "ytd-menu-renderer ytd-button-renderer:last-of-type button",
+    "button[aria-label='Save to playlist']",
+    "button[aria-label='Speichern']",
+    "button[aria-label='Enregistrer']"
   ],
+  "_comment_save_button": "Priority: stable class/ID first (locale-independent), structural fallback, locale-specific aria-labels LAST. YtSaveButtonPlaceholderHost is YouTube's Polymer component class — stable across locales.",
   "watch_later_item": [
     "ytd-playlist-add-to-option-renderer[playlist-id='WL']",
     "yt-playlist-add-to-option-renderer[playlist-id='WL']"
@@ -181,15 +184,14 @@
     "button[aria-label*='CC']"
   ],
   "autoplay_toggle": [
-    ".ytp-autonav-toggle-button",
+    "button.ytp-autonav-toggle-button[aria-checked]",
     "button.ytp-autonav-toggle-button",
-    "[data-ytac-toggle-enabled]",
-    "ytd-compact-autoplay-renderer #toggleButton",
+    ".ytp-autonav-toggle-button",
+    "ytd-compact-autoplay-renderer button[aria-checked]",
     "ytd-compact-autoplay-renderer button",
-    ".ytd-compact-autoplay-renderer button",
-    "button[aria-label*='Autoplay']",
-    "button[aria-label*='autoplay' i]"
+    "button[aria-label*='Autoplay']"
   ],
+  "_comment_autoplay_toggle": "Priority: aria-checked first (spec-compliant), then stable YTP class, then component-scoped, then English-only aria-label as last resort. Removed [data-ytac-toggle-enabled] (undocumented internal attr) and duplicate selectors.",
 
   "_comment_navigation": "Navigation buttons and links.",
   "next_button": [
