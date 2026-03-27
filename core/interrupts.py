@@ -45,74 +45,66 @@ logger = logging.getLogger(__name__)
 
 # Priority 1 — Blocking overlays & modals
 # These sit on top of everything else and must be cleared first.
-# SAFETY: Only ARIA close/dismiss labels are used here.
-# Removed: button:has-text("OK"), button:has-text("Okay"),
-#          button:has-text("Confirm"), button:has-text("Continue")
-# These are too generic and would dismiss legitimate confirmation dialogs
-# (e.g. Amazon checkout, form submissions, delete confirmations).
+# SAFETY: Only ARIA close/dismiss labels are used here — exact matches only.
+# Removed: button.close, button.btn-close, [data-dismiss='modal'],
+#          .modal-close, .close-button, .popup-close, .lightbox-close, .overlay-close
+# These are too generic and match Amazon checkout confirmation dialogs,
+# Bootstrap modals on order pages, and other legitimate UI elements.
+# Removed: button[aria-label*='lose'] partial match — matches 'foreclose', 'disclose' etc.
+# Removed: button:has-text('OK'), button:has-text('Continue') — match checkout flows.
 _OVERLAY_SELECTORS: list[str] = [
-    # Generic ARIA close buttons
+    # Generic ARIA close buttons — EXACT label matches only (no partial matching)
     "button[aria-label='Close']",
     "button[aria-label='close']",
     "button[aria-label='Dismiss']",
     "button[aria-label='dismiss']",
-    "button[aria-label='Schließen']",         # German
-    "button[aria-label='Fermer']",             # French
-    # data-testid patterns (widely used in modern SPAs)
+    "button[aria-label='Schließen']",         # German exact
+    "button[aria-label='Fermer']",             # French exact
+    # data-testid patterns (widely used in modern SPAs) — canonical data attributes
     "[data-testid='close-button']",
     "[data-testid='modal-close']",
     "[data-testid='dialog-close']",
-    # Bootstrap / common CSS frameworks
-    "button.close",
-    "button.btn-close",
-    "[data-dismiss='modal']",
-    # Class-name patterns
-    ".modal-close",
-    ".close-button",
-    ".popup-close",
-    ".lightbox-close",
-    ".overlay-close",
+    # Compound class patterns — require BOTH modal/dialog/popup AND close in class names.
+    # More specific than single-class patterns; unlikely to match Amazon checkout.
     "[class*='modal'] button[class*='close']",
     "[class*='dialog'] button[class*='close']",
     "[class*='popup'] button[class*='close']",
-    # role=dialog close buttons (ARIA-compliant patterns)
-    "[role='dialog'] button[aria-label*='lose']",
-    "[role='dialog'] button[aria-label*='ismiss']",
-    "[role='alertdialog'] button[aria-label*='lose']",
+    # role=dialog/alertdialog — EXACT aria-label only (no *='lose' partial matching)
+    "[role='dialog'] button[aria-label='Close']",
+    "[role='dialog'] button[aria-label='close']",
+    "[role='dialog'] button[aria-label='Dismiss']",
+    "[role='dialog'] button[aria-label='dismiss']",
+    "[role='alertdialog'] button[aria-label='Close']",
+    "[role='alertdialog'] button[aria-label='close']",
 ]
 
 # Priority 2 — Cookie banners & consent dialogs
 # Accept/agree selectors — dismissing by acceptance (not rejection) to avoid
 # sites hiding content behind consent walls.
 _COOKIE_SELECTORS: list[str] = [
-    # English variants (most common)
+    # English variants — multi-word or cookie-context-specific ONLY.
+    # REMOVED: 'Accept', 'Agree', 'Got it', 'I agree', 'I Accept', 'Confirm all'
+    # Reason: Amazon checkout uses these exact words on payment/ToS acceptance buttons.
+    # Only multi-word phrases or well-known cookie-specific phrases are retained.
     "button:has-text('Accept all')",
     "button:has-text('Accept All')",
     "button:has-text('Accept all cookies')",
     "button:has-text('Accept cookies')",
     "button:has-text('Accept Cookies')",
-    "button:has-text('Accept')",
-    "button:has-text('Agree')",
     "button:has-text('Agree and proceed')",
     "button:has-text('Agree to all')",
     "button:has-text('Allow all')",
     "button:has-text('Allow All')",
     "button:has-text('Allow cookies')",
     "button:has-text('Allow all cookies')",
-    "button:has-text('Got it')",
-    "button:has-text('I agree')",
-    "button:has-text('I Accept')",
-    "button:has-text('Confirm all')",
-    # German variants
+    # German variants — multi-word only.
+    # REMOVED: 'Akzeptieren', 'Zustimmen', 'Einverstanden' — single-word, too generic.
     "button:has-text('Alle akzeptieren')",
-    "button:has-text('Akzeptieren')",
-    "button:has-text('Zustimmen')",
-    "button:has-text('Einverstanden')",
     "button:has-text('Alle zulassen')",
-    # French variants
+    # French variants — multi-word only.
+    # REMOVED: 'Accepter' — single-word, too generic.
     "button:has-text('Tout accepter')",
     "button:has-text('Accepter tout')",
-    "button:has-text('Accepter')",
     # YouTube-specific consent dialogs
     "ytd-consent-bump-v2-renderer button.VfPpkd-LgbsSe",
     "ytd-consent-bump-v2-renderer button[aria-label*='Accept']",

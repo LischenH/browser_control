@@ -51,12 +51,12 @@
     "a[href='/cart']",
     "#sw-gtc .a-button-text"
   ],
-  "_comment_remove_from_cart": "Attribute-based selectors first for UI-change resilience; value-based English fallback last.",
+  "_comment_remove_from_cart": "Attribute-based and data-action selectors only. Removed input[value='Delete'] — locale-specific English text, breaks on amazon.de (uses 'L\u00f6schen').",
   "remove_from_cart_button": [
     "input[data-action='delete']",
     ".sc-action-delete input",
     "a[data-action='delete']",
-    "input[value='Delete']"
+    ".sc-action-delete [data-action='delete']"
   ],
   "wishlist_button": [
     "#add-to-wishlist-button-submit",
@@ -98,9 +98,9 @@
   "wishlist_nav_link": [
     "#nav-wishlist",
     "a[href*='wishlist']",
-    "a[aria-label*='Wish List']",
     "#nav-link-wishlist"
   ],
+  "_comment_wishlist_nav_removed": "Removed a[aria-label*='Wish List'] — locale-specific English partial match, breaks on amazon.de where label is 'Wunschliste'.",
 
   "_comment_product": "Product page data selectors.",
   "_comment_price": "Price selectors ordered new → old. Older priceblock_* IDs removed (deprecated 2021).",

@@ -91,9 +91,9 @@
     "#top-level-buttons-computed ytd-like-button-renderer button",
     "ytd-segmented-like-dislike-button-renderer ytd-like-button-renderer button",
     "#segmented-like-button button",
-    "button[aria-label='Like']",
-    "button[aria-label*='like' i]"
+    "button[aria-label='Like']"
   ],
+  "_comment_like_button_removed": "Removed 'button[aria-label*=like i]' — case-insensitive partial match also matches the Unlike button (aria-label contains 'like'), causing accidental double-toggle when video is already liked.",
   "unlike_button": [
     "button[aria-label='Unlike']",
     "ytd-like-button-renderer button[aria-pressed='true']",
@@ -125,10 +125,9 @@
   ],
   "watch_later_item": [
     "ytd-playlist-add-to-option-renderer[playlist-id='WL']",
-    "ytd-playlist-add-to-option-renderer:first-child #checkbox-container",
-    "#playlists yt-playlist-add-to-option-renderer:first-child",
-    "yt-playlist-add-to-option-renderer:first-child"
+    "yt-playlist-add-to-option-renderer[playlist-id='WL']"
   ],
+  "_comment_watch_later_removed": "Removed :first-child positional fallbacks — if the canonical [playlist-id='WL'] fails, positional fallbacks click the first playlist item regardless of content (not Watch Later). Fail gracefully instead of clicking the wrong playlist.",
   "playlist_menu": [
     "ytd-playlist-add-to-option-renderer",
     "yt-playlist-add-to-option-renderer",
