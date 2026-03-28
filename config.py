@@ -23,6 +23,13 @@ DEFAULT_TIMEOUT: float = 10.0
 # waited DEFAULT_TIMEOUT (10s); sleeping an extra 500ms is pure waste.
 RETRY_DELAY: float = 0.05
 
+# Retry delay specifically for NAVIGATION actions (go_home, next_video, etc.).
+# Navigation failures are typically due to network timing or redirect chains;
+# a longer delay gives the browser time to complete DNS resolution / redirects.
+# Applied in Executor._execute_with_retry when step.action_name is in
+# _NAVIGATION_ACTIONS and RETRY_BACKOFF is False.
+NAVIGATION_RETRY_DELAY: float = 0.5
+
 # ─── Retry-Logik ─────────────────────────────────────────────────────────────
 # Wie oft eine Aktion bei transientem Fehler wiederholt wird.
 # Gilt pro Selector-Versuch, nicht pro gesamte Selector-Liste.

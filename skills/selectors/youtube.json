@@ -46,8 +46,9 @@
     "a[href*='/shorts/']"
   ],
   "result_links_any": [
-    "ytd-video-renderer h3 a, ytd-reel-item-renderer a[href*='/shorts/']",
-    "ytd-video-renderer h3 a"
+    "ytd-video-renderer h3 a",
+    "ytd-reel-item-renderer a[href*='/shorts/']",
+    "ytd-video-renderer a#video-title-link"
   ],
 
   "_comment_player": "Regular /watch player vs Shorts player.",
@@ -161,9 +162,9 @@
   ],
   "speed_menu": [
     ".ytp-menuitem[aria-label*='Speed']",
-    ".ytp-menuitem[role='menuitem']:nth-child(2)",
     ".ytp-panel-menu .ytp-menuitem"
   ],
+  "_comment_speed_menu_removed": "Removed positional .ytp-menuitem[role='menuitem']:nth-child(2) — YTP menu items do not carry role=menuitem, making the selector a no-op.  Positional nth-child selectors also violate the selector priority rules.",
   "speed_panel_items": [
     ".ytp-panel-menu .ytp-menuitem",
     ".ytp-speed-menu .ytp-menuitem"
@@ -187,11 +188,9 @@
     "button.ytp-autonav-toggle-button[aria-checked]",
     "button.ytp-autonav-toggle-button",
     ".ytp-autonav-toggle-button",
-    "ytd-compact-autoplay-renderer button[aria-checked]",
-    "ytd-compact-autoplay-renderer button",
     "button[aria-label*='Autoplay']"
   ],
-  "_comment_autoplay_toggle": "Priority: aria-checked first (spec-compliant), then stable YTP class, then component-scoped, then English-only aria-label as last resort. Removed [data-ytac-toggle-enabled] (undocumented internal attr) and duplicate selectors.",
+  "_comment_autoplay_toggle": "Priority: aria-checked first (spec-compliant, locale-independent), then stable YTP class, then English-only aria-label as last resort. Removed ytd-compact-autoplay-renderer entries — this YouTube Polymer component was removed from the DOM and is never present.",
 
   "_comment_navigation": "Navigation buttons and links.",
   "next_button": [

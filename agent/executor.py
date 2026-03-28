@@ -45,6 +45,7 @@ from agent.planner import Step
 from agent.verifier import Verifier, VerifyResult
 from core.actions import Actions
 from skill_manager.manager import SkillManager
+from core.interrupts import InterruptHandler
 
 # Phase E: data layer
 from data.schema import SessionResult, TabResult, StepResult
@@ -67,6 +68,30 @@ _IDEMPOTENT_SKIP_PREFIXES: tuple[str, ...] = (
     "skipped_not_",
     "skipped",   # covers plain "skipped" AND all "skipped_*" variants
 )
+
+# D4: Navigation action names that may fail due to network timing.
+# These get config.NAVIGATION_RETRY_DELAY (0.5s) instead of the default
+# config.RETRY_DELAY (0.05s) so the browser has time to complete redirects.
+_NAVIGATION_ACTIONS: frozenset[str] = frozenset({
+    "navigate",
+    "go_home",
+    "go_shorts_home",
+    "go_to_channel",
+    "go_to_channel_by_name",
+    "next_video",
+    "previous_video",
+    "play_nth_next",
+    "open_recommended",
+    "open_history",
+    "open_liked_videos",
+    "open_playlists",
+    "open_watch_later",
+    "open_orders",
+    "open_cart",
+    "open_wishlist",
+    "click_first_video",
+    "click_first_result",
+})
 
 
 def _result_data_is_idempotent_skip(data: Any) -> bool:
@@ -122,6 +147,12 @@ class Executor:
         self._opened_tabs: list[dict] = []
         self._goal = goal  # Phase E
         self._writer = ResultWriter()  # Phase E: one writer instance per executor
+        # D2 FIX: one shared InterruptHandler for the entire run.
+        # Its URL-keyed cache (TTL=2s) now survives across steps — if the page
+        # URL hasn't changed between steps, the interrupt scan is skipped.
+        # Previously a fresh InterruptHandler was created per Actions instance
+        # (i.e. per step), so the cache was always empty on entry.
+        self._interrupt_handler = InterruptHandler()
         logger.info(
             "[Executor] Initialized | "
             "Skills: %s | MAX_RETRIES=%d | connection=%s",
@@ -199,6 +230,10 @@ class Executor:
                         self._page = live_page
                         # Rebuild verifier so conditions are checked on new page
                         self._verifier = Verifier(live_page, max_retries=self._max_retries)
+                        # D2: Invalidate interrupt cache on page change so the
+                        # new tab is immediately scanned (different URL).
+                        self._interrupt_handler._last_clean_url = ""
+                        self._interrupt_handler._last_clean_time = 0.0
                 except Exception as _sync_exc:
                     logger.debug(
                         "[Executor] Page sync skipped (non-fatal): %s", _sync_exc
@@ -258,7 +293,9 @@ class Executor:
                 )
 
             # -- Step 4: Repeat-Loop -------------------------------------------
-            actions = Actions(self._page)
+            # D2 FIX: pass the shared interrupt handler so its URL-keyed
+            # cache survives across all steps in this plan.
+            actions = Actions(self._page, interrupt_handler=self._interrupt_handler)
 
             for rep in range(repeat):
                 if repeat > 1:
@@ -427,17 +464,21 @@ class Executor:
 
         for attempt in range(1, self._max_retries + 1):
             if attempt > 1:
-                # Compute delay: exponential backoff when enabled, flat otherwise.
-                # Backoff: RETRY_DELAY * 2^(attempt-1), capped at 2.0s.
-                # Flat:    RETRY_DELAY on every retry (default, fast-SPA friendly).
+                # D4: Distinguish navigation vs action retry delays.
+                # Navigation actions fail due to network/redirect timing —
+                # retrying at 50ms is too aggressive (browser hasn't finished
+                # the redirect chain).  Action retries keep the fast 50ms path.
                 if config.RETRY_BACKOFF:
                     delay = min(config.RETRY_DELAY * (2 ** (attempt - 1)), 2.0)
+                elif step.action_name in _NAVIGATION_ACTIONS:
+                    delay = getattr(config, "NAVIGATION_RETRY_DELAY", 0.5)
                 else:
                     delay = config.RETRY_DELAY
                 logger.info(
                     "[Executor]   Retry %d/%d for '%s' (after %.3fs%s)",
                     attempt, self._max_retries, step.action_name, delay,
-                    " backoff" if config.RETRY_BACKOFF else "",
+                    " backoff" if config.RETRY_BACKOFF else
+                    " nav-delay" if step.action_name in _NAVIGATION_ACTIONS else "",
                 )
                 time.sleep(delay)
 

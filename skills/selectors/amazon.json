@@ -9,10 +9,10 @@
   ],
   "search_submit": [
     "#nav-search-submit-button",
-    "input[type='submit'][value='Go']",
     "input[type='submit']",
     "button[type='submit']"
   ],
+  "_comment_search_submit_removed": "Removed input[type='submit'][value='Go'] — value='Go' is an English-only text attribute that breaks on amazon.de (value='Los') and other locales. Removed per selector priority rule: visible text is LAST RESORT only.",
   "result_item": [
     "div[data-component-type='s-search-result']",
     "div.s-result-item[data-asin]",

@@ -377,16 +377,29 @@ class Actions:
         actions.evaluate_js("document.querySelector('video')?.pause()")
     """
 
-    def __init__(self, page: Page, mode: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        page: Page,
+        mode: Optional[str] = None,
+        interrupt_handler: Optional[InterruptHandler] = None,
+    ) -> None:
         """
         Args:
-            page: Playwright-Page.
-            mode: "fast" | "human" | "auto" | None.
-                  None → liest config.EXECUTION_MODE.
+            page:              Playwright-Page.
+            mode:              "fast" | "human" | "auto" | None.
+                               None → liest config.EXECUTION_MODE.
+            interrupt_handler: Optional shared InterruptHandler instance.
+                               Pass one created at Executor level so the
+                               URL-keyed 2-second cache survives across steps.
+                               If None → creates a fresh instance (old behaviour).
         """
         self._page = page
         self._mode_override = mode  # None = auto-resolve per Aktion
-        self._interrupts = InterruptHandler()
+        # D2 FIX: accept a shared handler so the URL-keyed cache is reused
+        # across all steps in a plan.  When called from Executor, the same
+        # InterruptHandler (and its cache) is reused for the whole run.
+        # Falls back to a fresh instance for standalone / test usage.
+        self._interrupts = interrupt_handler if interrupt_handler is not None else InterruptHandler()
 
     def _get_mode(self, per_action_mode: Optional[str] = None) -> str:
         """
