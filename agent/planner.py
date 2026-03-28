@@ -889,7 +889,7 @@ class _LLMEngine(_PlannerEngine):
         "    open_recommended, open_top_recommended\n"
         "\n"
         "  AMAZON — search & read:\n"
-        "    click_first_result, read_product_title, open_top_results\n"
+        "    search, click_first_result, read_product_title, open_top_results\n"
         "\n"
         "  AMAZON — shopping:\n"
         "    add_to_cart, remove_from_cart, add_to_wishlist, remove_from_wishlist, buy_now\n"

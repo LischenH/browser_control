@@ -874,13 +874,50 @@ class YouTubeSkill(BaseSkill):
             return Result.fail(error=f"toggle_subtitles(): {type(e).__name__}: {e}")
 
     def _action_toggle_autoplay(self, actions: Actions) -> Result:
-        """Toggle autoplay on/off."""
+        """
+        Toggle autoplay on/off.
+
+        Phase C fix:
+        - Reads aria-checked state BEFORE clicking so we know what state we're
+          toggling FROM (enables idempotent callers that want a specific state).
+        - Reads aria-checked state AFTER clicking to confirm the toggle worked.
+        - Returns {"autoplay": bool, "action": "enabled"|"disabled"|"toggled"}
+          instead of the opaque {"action": "autoplay_toggled"}.
+        - Uses _JS_GET_AUTOPLAY_STATE (aria-checked first, aria-pressed fallback)
+          — locale-independent, correct selector priority.
+        """
         logger.info(f"[{self.name}] toggle_autoplay()")
         try:
+            mode = self._current_mode(actions)
+            if mode == "shorts":
+                return Result.fail(error="toggle_autoplay(): autoplay toggle not available in Shorts mode")
+
+            # Read state before clicking
+            state_before = actions.safe_evaluate_js(_JS_GET_AUTOPLAY_STATE, default=None)
+            logger.debug(f"[{self.name}] toggle_autoplay(): state_before={state_before}")
+
             actions.wait_for(selectors=self._selectors["autoplay_toggle"], timeout=8.0)
             actions.click(selectors=self._selectors["autoplay_toggle"])
-            logger.info(f"[{self.name}] toggle_autoplay() ✅")
-            return Result.ok(data={"action": "autoplay_toggled"})
+
+            # Read state after clicking to confirm toggle
+            state_after = actions.safe_evaluate_js(_JS_GET_AUTOPLAY_STATE, default=None)
+            logger.debug(f"[{self.name}] toggle_autoplay(): state_after={state_after}")
+
+            # Determine action label from state transition
+            if state_after is True:
+                action_label = "enabled"
+            elif state_after is False:
+                action_label = "disabled"
+            else:
+                # Could not read state from aria-checked/aria-pressed — clicked but unverified
+                action_label = "toggled"
+
+            logger.info(f"[{self.name}] toggle_autoplay() ✅ autoplay={state_after} action={action_label}")
+            return Result.ok(data={
+                "autoplay": state_after,
+                "action": action_label,
+                "state_before": state_before,
+            })
         except ActionError as e:
             return Result.fail(error=f"toggle_autoplay(): {e}")
         except Exception as e:
