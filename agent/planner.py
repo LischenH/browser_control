@@ -233,6 +233,23 @@ class _TemplateEngine(_PlannerEngine):
         re.IGNORECASE,
     )
 
+    # ── MakerWorld search patterns (Phase E) ─────────────────────────────────
+    # "search makerworld for benchy and open top 5"
+    _RE_MW_TOP_N = re.compile(
+        r"search\s+makerworld\s+for\s+(.+?)\s+and\s+open\s+(?:top|first)\s+(\d+)",
+        re.IGNORECASE,
+    )
+    # "search makerworld for benchy"
+    _RE_MW_SEARCH = re.compile(
+        r"search\s+makerworld\s+for\s+(.+?)(?:\s+and\s+.*)?$",
+        re.IGNORECASE,
+    )
+    # "collect to CollectionName"
+    _RE_MW_COLLECT_NAMED = re.compile(
+        r"collect\s+(?:to|into)\s+(.+)",
+        re.IGNORECASE,
+    )
+
     def plan(self, goal: str) -> list[Step]:
         g = goal.strip()
 
@@ -285,6 +302,27 @@ class _TemplateEngine(_PlannerEngine):
         amz_steps = self._try_amz_on_page(g)
         if amz_steps:
             return amz_steps
+
+        # ── Phase E: MakerWorld search + open top N ────────────────────────
+        mw_top = self._RE_MW_TOP_N.search(g)
+        if mw_top:
+            return self._plan_mw_search_and_open(
+                mw_top.group(1).strip(), int(mw_top.group(2))
+            )
+
+        # ── Phase E: MakerWorld search ─────────────────────────────────────
+        mw_match = self._RE_MW_SEARCH.match(g)
+        if mw_match:
+            return self._plan_mw_search(mw_match.group(1).strip())
+
+        # ── Phase E: MakerWorld navigation ─────────────────────────────────
+        if re.match(r"open\s+makerworld", g, re.IGNORECASE):
+            return self._plan_mw_navigate()
+
+        # ── Phase E: MakerWorld ON-PAGE actions ────────────────────────────
+        mw_steps = self._try_mw_on_page(g)
+        if mw_steps:
+            return mw_steps
 
         logger.warning(
             f"[TemplateEngine] Unknown goal: '{g}'. "
@@ -517,6 +555,151 @@ class _TemplateEngine(_PlannerEngine):
                                "element_exists": ["body"]},
             description=description,
         )
+
+    # ── MakerWorld ON-PAGE action resolver (Phase E) ─────────────────
+
+    def _try_mw_on_page(self, g: str) -> list[Step]:
+        """
+        Attempts to match MakerWorld on-page commands.
+        Returns a list of Steps if matched, empty list otherwise.
+        On-page actions use url="makerworld.com" for skill routing.
+        """
+        # Combined: "like and collect"
+        if (re.search(r"\blike\b", g, re.IGNORECASE)
+                and re.search(r"\bcollect\b", g, re.IGNORECASE)):
+            return [
+                self._mw_step("like",    "Like this model"),
+                self._mw_step("collect", "Collect this model"),
+            ]
+
+        # Collect to named collection: "collect to MyCollection"
+        named_coll_m = self._RE_MW_COLLECT_NAMED.search(g)
+        if named_coll_m:
+            name = named_coll_m.group(1).strip()
+            return [self._mw_step("collect", f"Collect to '{name}'",
+                                  collection_name=name)]
+
+        # Download with explicit format
+        for fmt in ("3mf", "stl", "bambu"):
+            if re.search(
+                rf"\bdownload\b.*\b{fmt}\b|\b{fmt}\b.*\bdownload\b",
+                g, re.IGNORECASE,
+            ):
+                return [self._mw_step("download", f"Download as {fmt}", format=fmt)]
+
+        # Scrape any page content
+        if re.search(
+            r"scrape|extract\s+(?:data|info|content)|get\s+page\s+(?:data|info)",
+            g, re.IGNORECASE,
+        ):
+            return [Step(url="", action_name="scrape_page",
+                         params={},
+                         verify_conditions={"element_exists": ["body"]},
+                         description="Scrape page content")]
+
+        _kw: list[tuple[str, str, str, dict]] = [
+            (r"\blike\s+(?:this\s+)?model\b|\blike\s+it\b",
+             "like", "Like this model", {}),
+            (r"\bunlike\b|\bremove\s+like\b",
+             "unlike", "Remove like from model", {}),
+            (r"\btoggle\s+like\b",
+             "toggle_like", "Toggle like state", {}),
+            (r"\bcollect\b|\bbookmark\b",
+             "collect", "Collect this model", {}),
+            (r"\buncollect\b|\bremove\s+(?:from\s+)?collection\b",
+             "uncollect", "Remove from collection", {}),
+            (r"(?:get|show|list)\s+collections?|my\s+collections?",
+             "get_collections", "Get collection names", {}),
+            (r"\bdownload\b",
+             "download", "Download model (3mf)", {"format": "3mf"}),
+            (r"(?:get|show|read)\s+model\s+info|model\s+details?|what\s+is\s+this\s+model",
+             "get_model_info", "Get model info", {}),
+            (r"(?:get|show)\s+search\s+results?|list\s+(?:results?|models?)",
+             "get_search_results", "Get search results", {"n": 10}),
+            (r"(?:get|show|read)\s+popular\s+searches?",
+             "get_popular_searches", "Get popular search terms", {}),
+            (r"(?:get|show)\s+(?:my\s+)?uploads?|my\s+models?",
+             "get_my_uploads", "Get my uploaded models", {}),
+            (r"(?:get|show)\s+(?:my\s+)?likes?|models?\s+I\s+liked",
+             "get_my_likes", "Get liked models", {}),
+            (r"model\s+performance|stats?\s+overview",
+             "get_model_performance", "Get model performance stats", {}),
+        ]
+
+        for pattern, action_name, description, params in _kw:
+            if re.search(pattern, g, re.IGNORECASE):
+                return [self._mw_step(action_name, description, **params)]
+
+        return []
+
+    def _mw_step(self, action_name: str, description: str, **params) -> Step:
+        """Build a MakerWorld on-page Step with standard verify conditions."""
+        return Step(
+            url="makerworld.com",
+            action_name=action_name,
+            params=params,
+            verify_conditions={
+                "url_contains": "makerworld.com",
+                "element_exists": ["main", "body"],
+            },
+            description=description,
+        )
+
+    # ── MakerWorld plan templates (Phase E) ─────────────────────────────────
+
+    @staticmethod
+    def _plan_mw_navigate() -> list[Step]:
+        """Navigate to MakerWorld homepage."""
+        return [Step(
+            url="", action_name="navigate",
+            params={"url": "https://makerworld.com"},
+            verify_conditions={
+                "url_contains": "makerworld.com",
+                "element_exists": ["main", "a[href*='/models/']"],
+            },
+            description="Navigate to MakerWorld",
+        )]
+
+    @staticmethod
+    def _plan_mw_search(query: str) -> list[Step]:
+        """Navigate to MakerWorld and run a search."""
+        return [
+            Step(url="", action_name="navigate",
+                 params={"url": "https://makerworld.com"},
+                 verify_conditions={"url_contains": "makerworld.com"},
+                 description="Navigate to MakerWorld"),
+            Step(url="makerworld.com", action_name="search",
+                 params={"query": query},
+                 verify_conditions={
+                     "url_contains": "makerworld.com",
+                     "element_exists": ["a[href*='/models/']", "main"],
+                 },
+                 description=f"Search MakerWorld for '{query}'"),
+        ]
+
+    @staticmethod
+    def _plan_mw_search_and_open(query: str, n: int) -> list[Step]:
+        """Navigate to MakerWorld, search, then get top N results."""
+        return [
+            Step(url="", action_name="navigate",
+                 params={"url": "https://makerworld.com"},
+                 verify_conditions={"url_contains": "makerworld.com"},
+                 description="Navigate to MakerWorld"),
+            Step(url="makerworld.com", action_name="search",
+                 params={"query": query},
+                 verify_conditions={
+                     "url_contains": "makerworld.com",
+                     "element_exists": ["a[href*='/models/']", "main"],
+                 },
+                 description=f"Search MakerWorld for '{query}'"),
+            Step(url="makerworld.com", action_name="get_search_results",
+                 params={"n": n},
+                 verify_conditions={
+                     "url_contains": "makerworld.com",
+                     "element_exists": ["main"],
+                 },
+                 description=f"Get top {n} MakerWorld results"),
+        ]
 
     # ── YouTube plan templates (unchanged + phase 10 additions) ──────────────
 
@@ -937,7 +1120,21 @@ class _LLMEngine(_PlannerEngine):
         "* For \"like this video\": use \"like\" or \"like_video\" — both are valid\n"
         "* For \"like a short\": use \"like_short\"\n"
         "* For \"seek forward 30s\": use \"seek_forward\" with params {\"seconds\": 30}\n"
-        "* For \"scroll comments\": use \"scroll_comments\" with params {\"amount\": 3}"
+        "* For \"scroll comments\": use \"scroll_comments\" with params {\"amount\": 3}\n"
+        "\n"
+        "  GENERIC:\n"
+        "    scrape_page\n"
+        "\n"
+        "  MAKERWORLD \u2014 use url='makerworld.com' for all MakerWorld steps:\n"
+        "    navigate, search, get_model_info, get_search_results,\n"
+        "    get_model_performance, get_popular_searches,\n"
+        "    like, unlike, toggle_like, collect, uncollect, get_collections,\n"
+        "    download, download_3mf, download_stl,\n"
+        "    get_my_uploads, get_my_likes, compare_models\n"
+        "\n"
+        "* MakerWorld on-page actions (like, collect, download) need NO navigate step\n"
+        "* For MakerWorld download: use action='download' with params {format: '3mf'}\n"
+        "* scrape_page works on ANY page \u2014 use url='' and element_exists=['body']"
     )
 
     def plan(self, goal: str) -> list[Step]:

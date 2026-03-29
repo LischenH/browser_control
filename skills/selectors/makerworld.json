@@ -1,0 +1,69 @@
+{
+  "_comment": "MakerWorld selectors — attribute-based CSS fallbacks in priority order. Used ONLY for wait_for() page-load detection; all interactive clicks are JS-based (MakerWorld is a React/MUI SPA).",
+
+  "_comment_page_load": "Used to confirm the page has rendered main content.",
+  "model_page_root": [
+    "h1",
+    "[class*='model-detail']",
+    "[class*='modelDetail']",
+    "main"
+  ],
+  "search_result_root": [
+    "a[href*='/models/']",
+    "[class*='model-card']",
+    "[class*='ModelCard']",
+    "main"
+  ],
+  "search_box": [
+    "input[type='search']",
+    "input[placeholder*='Search']",
+    "input[placeholder*='search']",
+    "input[aria-label*='search' i]",
+    "input[name='keyword']"
+  ],
+  "profile_root": [
+    "[class*='profile']",
+    "[class*='Profile']",
+    "main",
+    "#__next main"
+  ],
+
+  "_comment_like": "Like button — attribute-based only. Locale-independent.",
+  "like_button": [
+    "button[aria-label*='like' i]",
+    "[class*='like-icon-box']",
+    "[data-testid*='like']"
+  ],
+
+  "_comment_collect": "Collection/bookmark button.",
+  "collect_button": [
+    "[class*='collection-entry']",
+    "button[aria-label*='collect' i]",
+    "button[aria-label*='bookmark' i]",
+    "[data-testid*='collect']"
+  ],
+
+  "_comment_download": "Download button zone — positional fallback via JS.",
+  "download_button": [
+    "[class*='download-btn']",
+    "button[aria-label*='download' i]",
+    "[class*='icon-box']",
+    "[data-testid*='download']"
+  ],
+
+  "_comment_dialog": "MUI dialog root for collection picker and confirmations.",
+  "dialog_root": [
+    "[class*='MuiDialog-root']:not([class*='MuiModal-hidden'])",
+    "[role='dialog']",
+    "[class*='MuiModal-root']:not([class*='MuiModal-hidden'])"
+  ],
+
+  "_comment_points": "Points page balance element.",
+  "points_balance": [
+    "[class*='balance']",
+    "[class*='Balance']",
+    "[class*='point']",
+    "h2",
+    "h1"
+  ]
+}
