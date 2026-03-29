@@ -26,6 +26,7 @@ import logging
 from skills.base_skill import BaseSkill
 from skills.youtube_skill import YouTubeSkill
 from skills.amazon_skill import AmazonSkill
+from skills.makerworld_skill import MakerWorldSkill
 from skills.generic_skill import GenericSkill
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,8 @@ class SkillManager:
             # Erster Match gewinnt → spezifischere Skills zuerst.
             self._skills: list[BaseSkill] = [
                 YouTubeSkill(),
-                AmazonSkill(),    # Phase 7 — Amazon-Skill
+                AmazonSkill(),       # Phase 7 — Amazon-Skill
+                MakerWorldSkill(),   # Phase E — MakerWorld-Skill
             ]
         else:
             self._skills = list(skills)

@@ -63,14 +63,16 @@ class GenericSkill(BaseSkill):
         Gibt die Action-Funktion für den gegebenen Namen zurück.
 
         Verfügbare Actions:
-            "navigate"  → navigate(url: str)
-            "noop"      → noop()
+            "navigate"    → navigate(url: str)
+            "noop"        → noop()
+            "scrape_page" → scrape_page() — structured content extraction
 
         Unbekannte Actions → None + Warning
         """
         _action_map: dict[str, Callable] = {
-            "navigate": self._action_navigate,
-            "noop":     self._action_noop,
+            "navigate":    self._action_navigate,
+            "noop":        self._action_noop,
+            "scrape_page": self._action_scrape_page,
         }
         action = _action_map.get(name)
         if action is None:
@@ -123,3 +125,81 @@ class GenericSkill(BaseSkill):
         """
         logger.debug(f"[{self.name}] noop() → kein Effekt")
         return Result.ok(data="noop")
+
+    def _action_scrape_page(self, actions: Actions) -> Result:
+        """
+        Extracts structured content from the current page.
+
+        Adapted from browser_automation/automation/scraper.py (Phase E reference
+        integration). Works on any URL via a single synchronous JS evaluation.
+
+        Returns a dict with:
+            url           – current page URL
+            title         – document.title
+            description   – meta description
+            og_title      – Open Graph title
+            og_description– Open Graph description
+            headings      – list of {level, text} for h1/h2/h3
+            links         – list of {text, href} for visible <a> tags (max 50)
+            text_excerpt  – first 2000 chars of visible body text
+        """
+        logger.info(f"[{self.name}] scrape_page()")
+        try:
+            data = actions.evaluate_js(
+                """
+                () => {
+                    function getMeta(name) {
+                        const el = document.querySelector(
+                            'meta[name="' + name + '"], meta[property="' + name + '"]'
+                        );
+                        return el ? (el.getAttribute('content') || '') : '';
+                    }
+
+                    const headings = [];
+                    document.querySelectorAll('h1,h2,h3').forEach(h => {
+                        const t = (h.innerText || '').trim();
+                        if (t) headings.push({
+                            level: h.tagName.toLowerCase(),
+                            text:  t.slice(0, 200)
+                        });
+                    });
+
+                    const links = [];
+                    document.querySelectorAll('a[href]').forEach(a => {
+                        const href = a.href || '';
+                        const text = (a.innerText || '').trim();
+                        if (href && !href.startsWith('javascript:') && text)
+                            links.push({ text: text.slice(0, 120), href });
+                    });
+
+                    const bodyText = (document.body
+                        ? (document.body.innerText || '')
+                        : ''
+                    ).replace(/\\n{3,}/g, '\\n\\n').trim();
+
+                    return {
+                        url:            window.location.href,
+                        title:          document.title,
+                        description:    getMeta('description'),
+                        og_title:       getMeta('og:title'),
+                        og_description: getMeta('og:description'),
+                        headings:       headings.slice(0, 20),
+                        links:          links.slice(0, 50),
+                        text_excerpt:   bodyText.slice(0, 2000),
+                    };
+                }
+                """
+            )
+            if not data:
+                return Result.fail(error="scrape_page(): JS evaluation returned null")
+            logger.info(
+                f"[{self.name}] scrape_page() ✅ — "
+                f"title={str(data.get('title',''))[:60]!r} "
+                f"headings={len(data.get('headings', []))} "
+                f"links={len(data.get('links', []))}"
+            )
+            return Result.ok(data=data)
+        except ActionError as e:
+            return Result.fail(error=f"scrape_page(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"scrape_page(): {type(e).__name__}: {e}")

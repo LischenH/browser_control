@@ -241,7 +241,18 @@ class Executor:
 
             # Phase E: ensure we have an active TabResult for the current page
             if active_tab is None:
+                # Resolve the actual tab index so multi-tab sessions record
+                # each tab correctly instead of all defaulting to index 0.
+                _tab_idx = 0
+                if self._connection is not None:
+                    try:
+                        _pages = self._connection.context.pages
+                        if self._page in _pages:
+                            _tab_idx = _pages.index(self._page)
+                    except Exception:
+                        pass
                 active_tab = TabResult(
+                    tab_index=_tab_idx,
                     url=self._page.url,
                     title="",  # filled after execution
                 )

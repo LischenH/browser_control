@@ -790,6 +790,35 @@ _VALID_ACTIONS: frozenset[str] = frozenset({
     "read_price",
     "read_rating",
     "read_reviews",
+    # Generic — data (Phase E: scrape any page)
+    "scrape_page",
+    # MakerWorld — real action names (routed via url="makerworld.com")
+    "get_model_info",
+    "get_search_results",
+    "collect",
+    "uncollect",
+    "toggle_like",
+    "download",
+    "download_3mf",
+    "download_stl",
+    "navigate_to_model",
+    # MakerWorld — LLM-facing aliases (Phase E)
+    "mw_search",            # alias: search (routed to MakerWorldSkill by URL)
+    "mw_open_top",          # alias: open_top_results
+    "mw_get_info",          # alias: get_model_info
+    "mw_get_results",       # alias: get_search_results
+    # MakerWorld — engagement
+    "mw_like",              # alias: like
+    "mw_unlike",            # alias: unlike
+    "mw_toggle_like",       # alias: toggle_like
+    "mw_collect",           # alias: collect
+    "mw_uncollect",         # alias: uncollect
+    # MakerWorld — download
+    "mw_download",          # alias: download
+    "mw_download_3mf",      # alias: download_3mf
+    "mw_download_stl",      # alias: download_stl
+    # MakerWorld — navigation
+    "mw_navigate_to_model", # alias: navigate_to_model
 })
 
 _REQUIRED_STEP_KEYS: frozenset[str] = frozenset({
