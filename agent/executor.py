@@ -344,6 +344,7 @@ class Executor:
                     verify_reason=vr.reason if vr is not None else "",
                     duration_ms=step_duration_ms,
                     timestamp_start=step_start_iso,
+                    retries_used=step_result.get("retries_used", 0),
                 )
                 active_tab.steps.append(step_rec)
 
@@ -510,6 +511,7 @@ class Executor:
                 return {
                     "success": False, "data": None,
                     "verify_result": None, "message": msg,
+                    "retries_used": attempt - 1,
                 }
 
             logger.info(
@@ -527,6 +529,7 @@ class Executor:
                 return {
                     "success": True, "data": result.data,
                     "verify_result": None, "message": "",
+                    "retries_used": attempt - 1,
                 }
 
             # Verify
@@ -551,6 +554,7 @@ class Executor:
                 return {
                     "success": True, "data": result.data,
                     "verify_result": verify_result, "message": "",
+                    "retries_used": attempt - 1,
                 }
             elif verify_result.should_retry:
                 if attempt < self._max_retries:
@@ -563,6 +567,7 @@ class Executor:
                 return {
                     "success": False, "data": None,
                     "verify_result": verify_result, "message": msg,
+                    "retries_used": attempt - 1,
                 }
             elif verify_result.failed:
                 msg = (
@@ -572,13 +577,15 @@ class Executor:
                 return {
                     "success": False, "data": None,
                     "verify_result": verify_result, "message": msg,
+                    "retries_used": attempt - 1,
                 }
 
         msg = (
             f"Step '{step.action_name}': unknown abort after "
             f"{self._max_retries} attempts."
         )
-        return {"success": False, "data": None, "verify_result": last_verify, "message": msg}
+        return {"success": False, "data": None, "verify_result": last_verify, "message": msg,
+                "retries_used": self._max_retries - 1}
 
     # -------------------------------------------------------------------------
     # Logging Helpers

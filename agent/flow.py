@@ -186,7 +186,13 @@ class SearchFlow:
         page = None
         if self._tab_manager is not None and tab_url:
             try:
-                switched = self._tab_manager.switch_to_url(tab_url)
+                tab_id = tab_info.get("tab_id")
+                if tab_id is not None:
+                    # Prefer stable ID — immune to duplicate URLs
+                    switched = self._tab_manager.switch_to_tab_id(tab_id)
+                else:
+                    # Fallback: URL substring (may fail with duplicate URLs)
+                    switched = self._tab_manager.switch_to_url(tab_url)
                 page = switched.page
                 logger.debug("[SearchFlow] Switched to '%s'", tab_url[:60])
             except Exception as exc:

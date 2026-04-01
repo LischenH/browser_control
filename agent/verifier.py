@@ -330,12 +330,16 @@ class Verifier:
             f"{'✓' if passed else '✗'}"
         )
 
+        # FIX: URL mismatch after full page load is a hard failure, not transient.
+        # transient=True only when the page might still be navigating — url_contains
+        # cannot detect that, so treat failure as definitive (→ plan aborts immediately
+        # instead of wasting 3 retry cycles on the wrong page).
         return _CheckDetail(
             condition=key,
             expected=substring,
             actual=current_url,
             passed=passed,
-            transient=True,
+            transient=not passed,
             note="" if passed else f"URL '{current_url}' enthält '{substring}' nicht.",
         )
 
