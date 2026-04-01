@@ -402,6 +402,20 @@ class MakerWorldSkill(BaseSkill):
             # Analysis
             "get_popular_searches":  self._action_get_popular_searches,
             "compare_models":        self._action_compare_models,
+            # ── mw_* Aliases (Planner-facing names) ────────────────────────────
+            "mw_search":             self._action_search,
+            "mw_open_top":           self._action_get_search_results,
+            "mw_get_info":           self._action_get_model_info,
+            "mw_get_results":        self._action_get_search_results,
+            "mw_like":               self._action_like,
+            "mw_unlike":             self._action_unlike,
+            "mw_toggle_like":        self._action_toggle_like,
+            "mw_collect":            self._action_collect,
+            "mw_uncollect":          self._action_uncollect,
+            "mw_download":           self._action_download,
+            "mw_download_3mf":       self._action_download_3mf,
+            "mw_download_stl":       self._action_download_stl,
+            "mw_navigate_to_model":  self._action_navigate_to_model,
         }
         action = _map.get(name)
         if action is None:
@@ -907,6 +921,10 @@ class MakerWorldSkill(BaseSkill):
     def _action_download_stl(self, actions: Actions) -> Result:
         return self._action_download(actions, format="stl")
 
+    def _action_navigate_to_model(self, actions: Actions, url: str = "") -> Result:
+        """Thin wrapper: navigate to a model URL (alias for navigate_to)."""
+        return self._action_navigate_to(actions, url=url)
+
     # ═══════════════════════════════════════════════════════════════════
     # PROFILE (adapted from MakerWorldController v14)
     # ═══════════════════════════════════════════════════════════════════
@@ -916,6 +934,15 @@ class MakerWorldSkill(BaseSkill):
     ) -> Result:
         """Navigate to user's uploads page and scrape model cards."""
         logger.info("[%s] get_my_uploads(username='%s')", self.name, username)
+        if not username:
+            # Auto-detect from current URL: /@username/
+            username = actions.safe_evaluate_js(
+                "() => { const m = window.location.pathname.match(/@([^/]+)/); "
+                "return m ? m[1] : ''; }",
+                default=""
+            )
+        if not username:
+            return Result.fail("get_my_uploads(): username not provided and not in URL")
         return self._scrape_profile_list(actions, username, "upload")
 
     def _action_get_my_likes(
@@ -923,6 +950,15 @@ class MakerWorldSkill(BaseSkill):
     ) -> Result:
         """Navigate to user's liked models page and scrape model cards."""
         logger.info("[%s] get_my_likes(username='%s')", self.name, username)
+        if not username:
+            # Auto-detect from current URL: /@username/
+            username = actions.safe_evaluate_js(
+                "() => { const m = window.location.pathname.match(/@([^/]+)/); "
+                "return m ? m[1] : ''; }",
+                default=""
+            )
+        if not username:
+            return Result.fail("get_my_likes(): username not provided and not in URL")
         return self._scrape_profile_list(actions, username, "likes")
 
     def _scrape_profile_list(

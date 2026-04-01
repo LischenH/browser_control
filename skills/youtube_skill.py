@@ -140,7 +140,10 @@ _JS_IS_LIKED = """
   const btn = document.querySelector('ytd-like-button-renderer button[aria-pressed]')
            || document.querySelector('#top-level-buttons-computed button[aria-pressed]');
   if (btn) return btn.getAttribute('aria-pressed') === 'true';
-  return false;
+  // null = button not found on this page (e.g. channel page, search page).
+  // false = button found but aria-pressed='false'.
+  // Callers must handle null as "unknown", not as "not liked".
+  return null;
 }
 """
 
@@ -604,7 +607,7 @@ class YouTubeSkill(BaseSkill):
         logger.info(f"[{self.name}] unlike()")
         try:
             is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
-            if is_liked is False or is_liked is None:
+            if is_liked is False:
                 logger.info(f"[{self.name}] unlike(): not liked — skipping")
                 return Result.ok(data={"liked": False, "action": "skipped_not_liked"})
 
