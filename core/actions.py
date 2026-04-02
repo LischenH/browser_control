@@ -55,6 +55,7 @@ Neuer optionaler Parameter (rückwärts-kompatibel):
   get_text(selectors, mode=None)   → str
 """
 
+import json
 import logging
 import random
 import time
@@ -772,12 +773,12 @@ class Actions:
         # Playwright's wait_for_selector resolves as soon as ANY of them matches.
         combined = ", ".join(valid_selectors)
 
-        # Phase B: fallback logic — attempt full timeout first, then one retry
-        # with a shorter fallback timeout to handle transient DOM fluctuations
-        # (e.g. React re-renders) without adding a static sleep.
+        # Phase B: fallback logic — attempt full timeout first, then one quick retry
+        # (500ms) to handle transient DOM fluctuations (e.g. React re-renders)
+        # without adding proportional overhead to the failure path.
         last_exc: Exception | None = None
         for _pass, pass_timeout_ms in enumerate(
-            (int(t * 1000), max(500, int(t * 300)))
+            (int(t * 1000), 500)
         ):
             try:
                 self._page.wait_for_selector(
@@ -1011,7 +1012,17 @@ class Actions:
                             const a = el.closest('a') || el.querySelector('a');
                             return a ? a.getAttribute('href') : null;
                         })
-                        .filter(h => h && h.trim() !== '')
+                        .filter(h => {
+                            if (!h || !h.trim()) return false;
+                            // Only accept http/https and root-relative paths;
+                            // reject javascript:, data:, mailto:, # anchors, etc.
+                            const lower = h.toLowerCase();
+                            if (lower.startsWith('javascript:')) return false;
+                            if (lower.startsWith('data:'))       return false;
+                            if (lower.startsWith('mailto:'))     return false;
+                            if (lower.startsWith('tel:'))        return false;
+                            return true;
+                        })
                     """,
                 )
                 if hrefs:
@@ -1190,10 +1201,10 @@ class Actions:
                 "Allowed: up, down, left, right"
             )
 
-        escaped = selector.replace("'", "\\'")
+        escaped = json.dumps(selector)  # proper JS-string literal, handles all special chars
         js = f"""
         (function() {{
-            const el = document.querySelector('{escaped}');
+            const el = document.querySelector({escaped});
             if (el && el.scrollHeight > el.clientHeight) {{
                 el.scrollBy({delta_x}, {delta_y});
                 return true;

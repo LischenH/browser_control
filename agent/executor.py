@@ -48,7 +48,7 @@ from skill_manager.manager import SkillManager
 from core.interrupts import InterruptHandler
 
 # Phase E: data layer
-from data.schema import SessionResult, TabResult, StepResult
+from data.schema import SessionResult, TabResult, StepResult, _now_iso
 from data.writer import ResultWriter
 
 # Optional import -- only used when connection is passed to Executor.
@@ -232,8 +232,7 @@ class Executor:
                         self._verifier = Verifier(live_page, max_retries=self._max_retries)
                         # D2: Invalidate interrupt cache on page change so the
                         # new tab is immediately scanned (different URL).
-                        self._interrupt_handler._last_clean_url = ""
-                        self._interrupt_handler._last_clean_time = 0.0
+                        self._interrupt_handler.invalidate_cache()
                 except Exception as _sync_exc:
                     logger.debug(
                         "[Executor] Page sync skipped (non-fatal): %s", _sync_exc
@@ -668,12 +667,5 @@ class Executor:
         }
 
 
-# ─── Helpers (no external deps) ───────────────────────────────────────────────
-
-def _now_iso() -> str:
-    """Return current UTC time as ISO-8601 string."""
-    t = time.gmtime()
-    return (
-        f"{t.tm_year:04d}-{t.tm_mon:02d}-{t.tm_mday:02d}"
-        f"T{t.tm_hour:02d}:{t.tm_min:02d}:{t.tm_sec:02d}Z"
-    )
+# ─── Helpers ────────────────────────────────────────────────────────────────────────────
+# _now_iso() is imported from data.schema (DRY — single definition).

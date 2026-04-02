@@ -256,6 +256,20 @@ class InterruptHandler:
             self._last_clean_time = now
         return any_dismissed
 
+    def invalidate_cache(self) -> None:
+        """
+        Explicitly invalidate the URL-keyed interrupt scan cache.
+
+        Call this whenever the active page changes (e.g. after a tab switch or
+        navigation) so that the next handle() call runs a full interrupt scan
+        on the new page rather than relying on a stale cached result.
+
+        Used by Executor after a page-sync event.
+        """
+        self._last_clean_url = ""
+        self._last_clean_time = 0.0
+        logger.debug("[interrupts] Cache invalidated (page changed).")
+
     def _try_dismiss(self, page: Page, group: str, selectors: list[str]) -> bool:
         """
         Tries to dismiss one interrupt group by clicking the first visible selector.

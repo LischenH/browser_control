@@ -342,6 +342,31 @@ _JS_OPEN_DOWNLOAD_MENU = r"""
 }
 """
 
+# Performance stats table extractor for the data-overview/model page.
+_JS_GET_MODEL_PERFORMANCE = r"""
+() => {
+    const result = {headers: [], rows: []};
+    const thead = document.querySelector('thead');
+    if (thead)
+        result.headers = Array.from(thead.querySelectorAll('th,td'))
+            .map(h => (h.innerText||'').trim().toLowerCase()).filter(Boolean);
+    for (const row of (document.querySelector('tbody')||document).querySelectorAll('tr')) {
+        if (row.closest('thead')) continue;
+        const cells = Array.from(row.querySelectorAll('td,th'))
+            .map(c => (c.innerText||'').trim());
+        if (cells.length < 2 || !cells.some(c => /\d/.test(c))) continue;
+        const link = row.querySelector('a[href*="/models/"]');
+        result.rows.push({
+            title: link ? (link.innerText||'').trim() : cells[0],
+            url:   link ? link.href : '',
+            cells,
+        });
+        if (result.rows.length >= 50) break;
+    }
+    return JSON.stringify(result);
+}
+"""
+
 
 class MakerWorldSkill(BaseSkill):
     """
@@ -486,7 +511,14 @@ class MakerWorldSkill(BaseSkill):
         logger.info("[%s] get_model_info()", self.name)
         try:
             raw = actions.safe_evaluate_js(_JS_GET_MODEL_INFO, default="{}")
-            info = json.loads(raw or "{}")
+            try:
+                info = json.loads(raw or "{}")
+            except (json.JSONDecodeError, TypeError) as parse_err:
+                logger.warning(
+                    "[%s] get_model_info(): JSON parse failed (%s) — using empty dict",
+                    self.name, parse_err,
+                )
+                info = {}
             # Augment with current engagement state
             info["is_liked"] = str(
                 actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
@@ -511,30 +543,7 @@ class MakerWorldSkill(BaseSkill):
             for _ in range(4):
                 actions.scroll("down", 400)
                 time.sleep(0.5)
-            _JS_PERF = r"""
-            () => {
-                const result = {headers: [], rows: []};
-                const thead = document.querySelector('thead');
-                if (thead)
-                    result.headers = Array.from(thead.querySelectorAll('th,td'))
-                        .map(h => (h.innerText||'').trim().toLowerCase()).filter(Boolean);
-                for (const row of (document.querySelector('tbody')||document).querySelectorAll('tr')) {
-                    if (row.closest('thead')) continue;
-                    const cells = Array.from(row.querySelectorAll('td,th'))
-                        .map(c => (c.innerText||'').trim());
-                    if (cells.length < 2 || !cells.some(c => /\d/.test(c))) continue;
-                    const link = row.querySelector('a[href*="/models/"]');
-                    result.rows.push({
-                        title: link ? (link.innerText||'').trim() : cells[0],
-                        url:   link ? link.href : '',
-                        cells,
-                    });
-                    if (result.rows.length >= 50) break;
-                }
-                return JSON.stringify(result);
-            }
-            """
-            raw = actions.safe_evaluate_js(_JS_PERF, default="{}")
+            raw = actions.safe_evaluate_js(_JS_GET_MODEL_PERFORMANCE, default="{}")
             parsed = json.loads(raw or "{}")
             return Result.ok(data=parsed)
         except ActionError as e:

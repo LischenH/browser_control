@@ -158,8 +158,11 @@ class BrowserConnection:
 
         Returns:
             True  — connection is alive and responsive
-            False — connection is dead or unresponsive
+            False — connection is dead, unresponsive, or not yet established
         """
+        if self._active_page is None:
+            logger.debug("[BrowserConnection] Health-check: not connected (active_page is None)")
+            return False
         try:
             result = self._active_page.evaluate("() => document.readyState")
             logger.debug(f"[BrowserConnection] Health-check OK (readyState={result!r})")

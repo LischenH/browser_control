@@ -712,7 +712,15 @@ class YouTubeSkill(BaseSkill):
         actions.click(selectors=self._selectors["save_button"])
 
         # Wait for the playlist popup/panel
-        actions.wait_for(selectors=self._selectors["watch_later_item"], timeout=8.0)
+        try:
+            actions.wait_for(selectors=self._selectors["watch_later_item"], timeout=8.0)
+        except ActionError:
+            # Save panel appeared but Watch Later item never showed up — close and fail.
+            try:
+                actions.press_key("Escape")
+            except Exception:
+                pass
+            raise  # re-raise ActionError so caller sees a clean failure
 
         # Check current state (safe: returns None if JS errors — treated as unknown)
         current_state = actions.safe_evaluate_js(_JS_IS_WATCH_LATER_SAVED, default=None)

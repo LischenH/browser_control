@@ -256,6 +256,9 @@ class AmazonSkill(BaseSkill):
             for i, url in enumerate(urls):
                 try:
                     new_page = actions.open_new_tab(url)
+                    # A fresh Actions for each background tab is intentional:
+                    # InterruptHandler cache is URL-keyed — a new URL always
+                    # triggers a full scan regardless of handler sharing.
                     new_actions = Actions(new_page)
                     final_url = new_page.url
                     verified = _is_product_url(final_url)

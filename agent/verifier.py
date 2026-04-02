@@ -330,16 +330,17 @@ class Verifier:
             f"{'✓' if passed else '✗'}"
         )
 
-        # FIX: URL mismatch after full page load is a hard failure, not transient.
-        # transient=True only when the page might still be navigating — url_contains
-        # cannot detect that, so treat failure as definitive (→ plan aborts immediately
-        # instead of wasting 3 retry cycles on the wrong page).
+        # FIX: URL mismatch is a hard failure — no transient retry.
+        # When url_contains fails the page IS on the wrong URL; retrying 3 times
+        # wastes time without changing anything. Callers that need retry behaviour
+        # (e.g. still-loading SPAs) should use a longer initial timeout on the
+        # navigation step, not rely on verifier retries here.
         return _CheckDetail(
             condition=key,
             expected=substring,
             actual=current_url,
             passed=passed,
-            transient=not passed,
+            transient=False,   # hard fail — page is definitively on the wrong URL
             note="" if passed else f"URL '{current_url}' enthält '{substring}' nicht.",
         )
 
