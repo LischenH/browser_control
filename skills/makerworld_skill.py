@@ -655,6 +655,16 @@ class MakerWorldSkill(BaseSkill):
         """
         logger.info("[%s] collect(collection='%s')", self.name, collection_name)
         try:
+            # Idempotency pre-check: if already collected and no specific collection
+            # is requested, skip the dialog entirely (aria-pressed / class-based check
+            # via _JS_IS_COLLECTED which inspects the collection-entry element).
+            if not collection_name:
+                already = actions.safe_evaluate_js(_JS_IS_COLLECTED, default=None)
+                if already is True:
+                    logger.info("[%s] already collected — skipping", self.name)
+                    return Result.ok(
+                        data={"collected": True, "action": "skipped_already_collected"}
+                    )
             actions.safe_evaluate_js(
                 "() => document.body.click()", default=None
             )
@@ -942,7 +952,7 @@ class MakerWorldSkill(BaseSkill):
                 default=""
             )
         if not username:
-            return Result.fail("get_my_uploads(): username not provided and not in URL")
+            return Result.fail("username not provided and not detectable")
         return self._scrape_profile_list(actions, username, "upload")
 
     def _action_get_my_likes(
@@ -958,7 +968,7 @@ class MakerWorldSkill(BaseSkill):
                 default=""
             )
         if not username:
-            return Result.fail("get_my_likes(): username not provided and not in URL")
+            return Result.fail("username not provided and not detectable")
         return self._scrape_profile_list(actions, username, "likes")
 
     def _scrape_profile_list(

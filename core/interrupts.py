@@ -145,17 +145,10 @@ _COOKIE_SELECTORS: list[str] = [
 ]
 
 # Priority 3 — YouTube ads
-# Skip buttons + overlay close. Text-based selectors are locale-agnostic.
+# Skip buttons + overlay close.
+# Selector priority: data-*/class-based (stable) → text-based (locale fallback, end)
 _AD_SELECTORS: list[str] = [
-    # Skip button — text-based (works across all YouTube locales)
-    "button:has-text('Skip Ads')",
-    "button:has-text('Skip Ad')",
-    "button:has-text('Skip ads')",
-    "button:has-text('Überspringen')",         # German
-    "button:has-text('Passer')",               # French
-    "button:has-text('Omitir')",               # Spanish
-    "button:has-text('Preskočit')",            # Slovak/Czech
-    # YouTube-specific DOM selectors (may change with YouTube UI updates)
+    # YouTube-specific DOM selectors (stable class names — try first)
     ".ytp-skip-ad-button",
     ".ytp-ad-skip-button",
     ".ytp-ad-skip-button-modern",
@@ -165,6 +158,14 @@ _AD_SELECTORS: list[str] = [
     ".ytp-ad-overlay-close-button",
     ".ytp-ad-overlay-slot .ytp-ad-overlay-close-button",
     ".ytp-ad-text-overlay .ytp-ad-overlay-close-container button",
+    # Text-based selectors at END — locale-agnostic but lower priority
+    "button:has-text('Skip Ads')",
+    "button:has-text('Skip Ad')",
+    "button:has-text('Skip ads')",
+    "button:has-text('Überspringen')",         # German
+    "button:has-text('Passer')",               # French
+    "button:has-text('Omitir')",               # Spanish
+    "button:has-text('Preskočit')",            # Slovak/Czech
 ]
 
 # Master list in priority order (group_name, selectors)

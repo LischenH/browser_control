@@ -447,7 +447,9 @@ class Executor:
         for item in step_data:
             if isinstance(item, dict) and "url" in item and "title" in item:
                 self._opened_tabs.append(item)
-                if active_tab is not None:           # neu: pro-Tab-Tracking
+                if active_tab is not None:
+                    if not hasattr(active_tab, "opened_tabs"):
+                        active_tab.opened_tabs = []
                     active_tab.opened_tabs.append(item)
 
     def _execute_with_retry(
