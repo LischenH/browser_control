@@ -121,7 +121,8 @@
   "_comment_save_button": "Priority: stable class/ID first (locale-independent), structural fallback, locale-specific aria-labels LAST. YtSaveButtonPlaceholderHost is YouTube's Polymer component class — stable across locales.",
   "watch_later_item": [
     "ytd-playlist-add-to-option-renderer[playlist-id='WL']",
-    "yt-playlist-add-to-option-renderer[playlist-id='WL']"
+    "yt-playlist-add-to-option-renderer[playlist-id='WL']",
+    "ytd-playlist-add-to-option-renderer:first-child"
   ],
   "_comment_watch_later_removed": "Removed :first-child positional fallbacks — if the canonical [playlist-id='WL'] fails, positional fallbacks click the first playlist item regardless of content (not Watch Later). Fail gracefully instead of clicking the wrong playlist.",
   "playlist_menu": [

@@ -584,7 +584,7 @@ class YouTubeSkill(BaseSkill):
         """Like the current video or short. Idempotent — skips if already liked."""
         logger.info(f"[{self.name}] like()")
         try:
-            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
+            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked is True:
                 logger.info(f"[{self.name}] like(): already liked — skipping")
                 return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
@@ -592,7 +592,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=self._selectors["like_button"], timeout=10.0)
             actions.click(selectors=self._selectors["like_button"])
 
-            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
+            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked_after:
                 logger.info(f"[{self.name}] like() ✅")
                 return Result.ok(data={"liked": True, "action": "liked"})
@@ -1278,6 +1278,8 @@ class YouTubeSkill(BaseSkill):
             logger.info(f"[{self.name}] next_video(): next_button not found — trying sidebar")
             links = actions.evaluate_js(f"({_JS_GET_RECOMMENDED_LINKS})(3)")
             if links:
+                filtered = [l for l in links if '/watch' in l]
+                links = filtered if filtered else links
                 href = links[0]
                 url = href if href.startswith("http") else f"https://www.youtube.com{href}"
                 actions.navigate(url)
@@ -1639,7 +1641,7 @@ class YouTubeSkill(BaseSkill):
         logger.info(f"[{self.name}] like_short()")
         try:
             # Check current state first
-            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
+            is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked is True:
                 logger.info(f"[{self.name}] like_short(): already liked — skipping")
                 return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
@@ -1652,7 +1654,7 @@ class YouTubeSkill(BaseSkill):
             actions.wait_for(selectors=like_selectors, timeout=10.0)
             actions.click(selectors=like_selectors)
 
-            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=False)
+            is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked_after:
                 logger.info(f"[{self.name}] like_short() ✅")
                 return Result.ok(data={"liked": True, "action": "liked"})
@@ -1673,7 +1675,7 @@ class YouTubeSkill(BaseSkill):
         logger.info(f"[{self.name}] unlike_short()")
         try:
             is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
-            if is_liked is False or is_liked is None:
+            if is_liked is False:
                 logger.info(f"[{self.name}] unlike_short(): not liked — skipping")
                 return Result.ok(data={"liked": False, "action": "skipped_not_liked"})
 
