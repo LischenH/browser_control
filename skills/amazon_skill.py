@@ -215,19 +215,6 @@ class AmazonSkill(BaseSkill):
         except Exception as e:
             return Result.fail(error=f"click_first_result(): {type(e).__name__}: {e}")
 
-    def _action_read_result_title(self, actions: Actions) -> Result:
-        logger.info(f"[{self.name}] read_result_title()")
-        try:
-            actions.wait_for(selectors=self._selectors["result_title"], timeout=10.0)
-            title = actions.get_text(selectors=self._selectors["result_title"])
-            if not title or not title.strip():
-                return Result.fail(error="read_result_title(): empty title")
-            return Result.ok(data=title.strip())
-        except ActionError as e:
-            return Result.fail(error=f"read_result_title(): {e}")
-        except Exception as e:
-            return Result.fail(error=f"read_result_title(): {type(e).__name__}: {e}")
-
     def _action_read_product_title(self, actions: Actions) -> Result:
         logger.info(f"[{self.name}] read_product_title()")
         try:

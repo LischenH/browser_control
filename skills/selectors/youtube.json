@@ -26,14 +26,6 @@
     "ytd-video-renderer h3 a[href*='/watch?v=']"
   ],
 
-  "_comment_result_links": "Three selector groups for link extraction — choose based on content_type param.",
-  "result_links": [
-    "ytd-video-renderer a#video-title-link[href*='/watch?v=']",
-    "ytd-video-renderer a#video-title-link",
-    "ytd-video-renderer h3 a[href*='/watch?v=']",
-    "ytd-video-renderer h3 a",
-    "ytd-video-renderer #video-title"
-  ],
   "result_links_video": [
     "ytd-video-renderer a#video-title-link[href*='/watch?v=']",
     "ytd-video-renderer a#video-title-link",
@@ -46,7 +38,7 @@
     "a[href*='/shorts/']"
   ],
   "result_links_any": [
-    "ytd-video-renderer h3 a",
+    "ytd-video-renderer h3 a[href*='/watch']",
     "ytd-reel-item-renderer a[href*='/shorts/']",
     "ytd-video-renderer a#video-title-link"
   ],
