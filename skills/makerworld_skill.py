@@ -945,14 +945,16 @@ class MakerWorldSkill(BaseSkill):
         """Navigate to user's uploads page and scrape model cards."""
         logger.info("[%s] get_my_uploads(username='%s')", self.name, username)
         if not username:
-            # Auto-detect from current URL: /@username/
+            # Auto-detect from current URL (handles '/@user/', '/user/', '/profile/')
             username = actions.safe_evaluate_js(
-                "() => { const m = window.location.pathname.match(/@([^/]+)/); "
-                "return m ? m[1] : ''; }",
+                "() => { const p = window.location.pathname; "
+                "const a = p.match(/\\/@([^/]+)/); if(a) return a[1]; "
+                "const b = p.match(/\\/user\\/([^/]+)/); if(b) return b[1]; "
+                "const c = p.match(/\\/profile\\/([^/]+)/); return c ? c[1] : ''; }",
                 default=""
             )
         if not username:
-            return Result.fail("username not provided and not detectable")
+            return Result.fail("get_my_uploads(): Username nicht erkennbar")
         return self._scrape_profile_list(actions, username, "upload")
 
     def _action_get_my_likes(
@@ -961,14 +963,16 @@ class MakerWorldSkill(BaseSkill):
         """Navigate to user's liked models page and scrape model cards."""
         logger.info("[%s] get_my_likes(username='%s')", self.name, username)
         if not username:
-            # Auto-detect from current URL: /@username/
+            # Auto-detect from current URL (handles '/@user/', '/user/', '/profile/')
             username = actions.safe_evaluate_js(
-                "() => { const m = window.location.pathname.match(/@([^/]+)/); "
-                "return m ? m[1] : ''; }",
+                "() => { const p = window.location.pathname; "
+                "const a = p.match(/\\/@([^/]+)/); if(a) return a[1]; "
+                "const b = p.match(/\\/user\\/([^/]+)/); if(b) return b[1]; "
+                "const c = p.match(/\\/profile\\/([^/]+)/); return c ? c[1] : ''; }",
                 default=""
             )
         if not username:
-            return Result.fail("username not provided and not detectable")
+            return Result.fail("get_my_likes(): Username nicht erkennbar")
         return self._scrape_profile_list(actions, username, "likes")
 
     def _scrape_profile_list(
