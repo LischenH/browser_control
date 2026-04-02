@@ -222,7 +222,8 @@ class SearchFlow:
             )
             logger.warning("[SearchFlow] %s", msg)
             return _tab_entry(tab_index, tab_url, tab_info.get("title", ""),
-                              False, None, msg, 0.0)
+                              False, None, msg, 0.0,
+                              tab_id=tab_info.get("tab_id"))
 
         t_start = time.perf_counter()
         try:
@@ -234,13 +235,15 @@ class SearchFlow:
                 tab_index + 1, extract_action, result.success,
             )
             return _tab_entry(tab_index, tab_url, tab_info.get("title", ""),
-                              result.success, result.data, result.error or "", dur)
+                              result.success, result.data, result.error or "", dur,
+                              tab_id=tab_info.get("tab_id"))
         except Exception as exc:
             dur = (time.perf_counter() - t_start) * 1000
             msg = f"{type(exc).__name__}: {exc}"
             logger.error("[SearchFlow] Tab %d exception: %s", tab_index + 1, msg)
             return _tab_entry(tab_index, tab_url, tab_info.get("title", ""),
-                              False, None, msg, dur)
+                              False, None, msg, dur,
+                              tab_id=tab_info.get("tab_id"))
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -253,6 +256,7 @@ def _tab_entry(
     data: Any,
     error: str,
     duration_ms: float,
+    tab_id: int | None = None,     # neu: stabile Tab-ID für pro-Tab-Tracking
 ) -> dict[str, Any]:
     return {
         "tab_index": tab_index,
@@ -262,6 +266,7 @@ def _tab_entry(
         "data": data,
         "error": error,
         "duration_ms": round(duration_ms, 1),
+        "tab_id": tab_id,          # neu
     }
 
 

@@ -351,7 +351,7 @@ class Executor:
                 if step_result["success"]:
                     step_data = step_result["data"]
                     collected_data.append(step_data)
-                    self._collect_tab_data(step_data)
+                    self._collect_tab_data(step_data, active_tab=active_tab)
                     logger.info(
                         "[Executor] OK Step %d done: '%s'%s%s",
                         step_idx + 1,
@@ -440,13 +440,15 @@ class Executor:
     # Internal Methods
     # -------------------------------------------------------------------------
 
-    def _collect_tab_data(self, step_data: Any) -> None:
+    def _collect_tab_data(self, step_data: Any, active_tab: TabResult | None = None) -> None:
         """Collect tab data from open_top_results / open_top_recommended results."""
         if not isinstance(step_data, list):
             return
         for item in step_data:
             if isinstance(item, dict) and "url" in item and "title" in item:
                 self._opened_tabs.append(item)
+                if active_tab is not None:           # neu: pro-Tab-Tracking
+                    active_tab.opened_tabs.append(item)
 
     def _execute_with_retry(
         self,

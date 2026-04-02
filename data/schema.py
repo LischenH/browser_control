@@ -55,7 +55,8 @@ class StepResult:
         error_message   : Non-empty only when success=False.
         verify_status   : "pass" | "retry" | "fail" | "none" (no conditions).
         verify_reason   : Human-readable verify outcome.
-        retries_used    : How many retry attempts were consumed (0 = first try worked).
+        retries_used    : How many retry attempts were consumed.
+                          0 = succeeded on first attempt (NOT "retry tracking disabled").
         duration_ms     : Wall-clock time for the step in milliseconds.
         timestamp_start : ISO-8601 UTC timestamp when the step started.
     """
