@@ -81,7 +81,44 @@ _OVERLAY_SELECTORS: list[str] = [
 # Priority 2 — Cookie banners & consent dialogs
 # Accept/agree selectors — dismissing by acceptance (not rejection) to avoid
 # sites hiding content behind consent walls.
+# Selector priority: ID > data-* > aria-* > class/structure > YouTube-specific > text
 _COOKIE_SELECTORS: list[str] = [
+    # ── Gruppe 1: ID-basiert (höchste Priorität) ─────────────────────────────
+    # Named IDs — well-known Consent Management Platforms (CMPs).
+    # IDs are the most specific and stable selectors available.
+    "#onetrust-accept-btn-handler",                          # OneTrust
+    "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll", # Cookiebot
+    "#accept-all-cookies",
+    "#cookie-accept",
+    "#cookie-consent-accept",
+    "#cookies-accept",
+    "#gdpr-cookie-accept",
+    "#accept_all",
+    # ── Gruppe 2: data-Attribute ──────────────────────────────────────────────
+    # data-* attributes are explicit CMP API surface — very reliable.
+    "[data-cookiebanner='accept_button']",
+    # ── Gruppe 3: aria-Attribute ──────────────────────────────────────────────
+    # Exact aria-label matches — no partial matching to avoid false positives.
+    "[aria-label='Accept cookies']",
+    "[aria-label='Accept all cookies']",
+    # ── Gruppe 4: Klassen/Struktur ────────────────────────────────────────────
+    # Class-based and compound structural selectors.
+    ".cookie-accept-all",
+    ".js-accept-cookies",
+    "button[class*='cookie'][class*='accept']",
+    "button[id*='cookie'][id*='accept']",
+    "button[class*='consent'][class*='accept']",
+    "button[id*='consent'][id*='accept']",
+    # ── Gruppe 5: YouTube-spezifisch (Komponenten-Selektoren) ─────────────────
+    # YouTube consent dialogs use custom web components — scoped selectors.
+    "ytd-consent-bump-v2-renderer button.VfPpkd-LgbsSe",
+    "ytd-consent-bump-v2-renderer button[aria-label*='Accept']",
+    "[aria-label='Accept the use of cookies and other data for the purposes described']",
+    "tp-yt-paper-dialog .ytd-button-renderer:has-text('Accept all')",
+    "ytd-consent-bump-v2-renderer form button:last-of-type",
+    # ── Gruppe 6: Text-basiert (niedrigste Priorität) ─────────────────────────
+    # Text matching is locale-dependent and prone to false positives on
+    # checkout/ToS pages. Used only as last resort.
     # English variants — multi-word or cookie-context-specific ONLY.
     # REMOVED: 'Accept', 'Agree', 'Got it', 'I agree', 'I Accept', 'Confirm all'
     # Reason: Amazon checkout uses these exact words on payment/ToS acceptance buttons.
@@ -105,31 +142,6 @@ _COOKIE_SELECTORS: list[str] = [
     # REMOVED: 'Accepter' — single-word, too generic.
     "button:has-text('Tout accepter')",
     "button:has-text('Accepter tout')",
-    # YouTube-specific consent dialogs
-    "ytd-consent-bump-v2-renderer button.VfPpkd-LgbsSe",
-    "ytd-consent-bump-v2-renderer button[aria-label*='Accept']",
-    "[aria-label='Accept the use of cookies and other data for the purposes described']",
-    "tp-yt-paper-dialog .ytd-button-renderer:has-text('Accept all')",
-    "ytd-consent-bump-v2-renderer form button:last-of-type",
-    # Named IDs — well-known Consent Management Platforms (CMPs)
-    "#onetrust-accept-btn-handler",                          # OneTrust
-    "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll", # Cookiebot
-    "#accept-all-cookies",
-    "#cookie-accept",
-    "#cookie-consent-accept",
-    "#cookies-accept",
-    "#gdpr-cookie-accept",
-    "#accept_all",
-    ".cookie-accept-all",
-    ".js-accept-cookies",
-    "[data-cookiebanner='accept_button']",
-    "[aria-label='Accept cookies']",
-    "[aria-label='Accept all cookies']",
-    # Generic class/ID pattern matching
-    "button[class*='cookie'][class*='accept']",
-    "button[id*='cookie'][id*='accept']",
-    "button[class*='consent'][class*='accept']",
-    "button[id*='consent'][id*='accept']",
 ]
 
 # Priority 3 — YouTube ads
