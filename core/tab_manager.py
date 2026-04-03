@@ -350,14 +350,16 @@ class TabManager:
 
     def _activate(self, tab: TabInfo) -> None:
         """
-        Focus guarantee: brings the tab to the front AND sets conn.active_page.
-        Both steps are required — bring_to_front() alone doesn't update the
-        active_page that the executor uses for actions.
+        Focus guarantee: sets conn.active_page so the executor operates on the
+        correct Page.
+
+        NOTE: bring_to_front() is intentionally NOT called here.
+        In CDP mode, bring_to_front() sends Target.activateTarget which causes
+        Chrome to reload/unfreeze ALL background tabs simultaneously, which
+        interrupts any video playback or page state in other tabs.
+        Setting conn.active_page is sufficient for the executor to act on the
+        correct page without disturbing any other tabs.
         """
-        try:
-            tab.page.bring_to_front()
-        except Exception as exc:
-            logger.debug(f"[TabManager] bring_to_front failed (non-fatal): {exc}")
         self._conn.active_page = tab.page
 
     def _get_page_index(self, page: Page) -> int:

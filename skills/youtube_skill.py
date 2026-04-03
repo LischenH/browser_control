@@ -941,7 +941,7 @@ class YouTubeSkill(BaseSkill):
 
         Improvements (Phase 10.1):
         - Multi-language "auto" support: matches "auto", "automatisch", "automatique", etc.
-        - Resolution detection via regex (r"\d+p") instead of text equality — locale-safe.
+        - Resolution detection via regex (r"\\d+p") instead of text equality — locale-safe.
         - No aria-label reliance: uses innerText comparison only.
         """
         logger.info(f"[{self.name}] set_quality('{quality}')")

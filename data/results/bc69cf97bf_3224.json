@@ -1,0 +1,71 @@
+{
+  "session_id": "bc69cf97bf_3224",
+  "goal": "",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": true,
+  "steps_total": 3,
+  "steps_completed": 3,
+  "error_message": "",
+  "tabs": [
+    {
+      "tab_index": 46,
+      "url": "about:blank",
+      "title": "(15) Best of lofi hip hop 2021 ✨ [beats to relax/study to] - YouTube",
+      "success": true,
+      "steps_completed": 3,
+      "total_duration_ms": 61541.3,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "navigate",
+          "description": "Navigate to YouTube",
+          "success": true,
+          "data": "https://www.youtube.com",
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "Alle Bedingungen erfüllt.",
+          "retries_used": 0,
+          "duration_ms": 29272.8,
+          "timestamp_start": "2026-04-03T10:34:39Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "search",
+          "description": "Search for 'lo-fi music'",
+          "success": true,
+          "data": "lo-fi music",
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "Alle Bedingungen erfüllt.",
+          "retries_used": 0,
+          "duration_ms": 17587.3,
+          "timestamp_start": "2026-04-03T10:35:08Z"
+        },
+        {
+          "step_index": 2,
+          "action_name": "click_first_video",
+          "description": "Click first video result",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "Alle Bedingungen erfüllt.",
+          "retries_used": 0,
+          "duration_ms": 14681.2,
+          "timestamp_start": "2026-04-03T10:35:26Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T10:34:39Z",
+  "timestamp_end": "2026-04-03T10:35:40Z",
+  "duration_ms": 61590.1,
+  "executor_version": "1.0"
+}

@@ -129,6 +129,10 @@ class BrowserConnection:
         logger.info("[BrowserConnection] ✓ Health-check passed. Connection ready.")
         return self
 
+    def close(self) -> None:
+        """Alias for disconnect(). Does NOT close Chrome."""
+        self.disconnect()
+
     def disconnect(self) -> None:
         """
         Clean teardown. Does NOT close Chrome.
