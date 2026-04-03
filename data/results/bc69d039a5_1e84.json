@@ -1,0 +1,73 @@
+{
+  "session_id": "bc69d039a5_1e84",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": true,
+  "steps_total": 3,
+  "steps_completed": 3,
+  "error_message": "",
+  "tabs": [
+    {
+      "tab_index": 11,
+      "url": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+      "title": "Anker 240W USB-C Kabel 1,8m 2er-Pack geflochtenes Ladekabel",
+      "success": true,
+      "steps_completed": 3,
+      "total_duration_ms": 9771.2,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "search",
+          "description": "Suche: USB-C",
+          "success": true,
+          "data": "usb c kabel",
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 4121.1,
+          "timestamp_start": "2026-04-03T22:05:25Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "open_search_result",
+          "description": "Erstes Produkt öffnen",
+          "success": true,
+          "data": {
+            "url": "https://www.amazon.de/Anker-geflochtenes-schmutzabweisendes-Ladekabel-MacBook-Schwarz/dp/B0DXDTX47W"
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 5578.0,
+          "timestamp_start": "2026-04-03T22:05:29Z"
+        },
+        {
+          "step_index": 2,
+          "action_name": "read_product_title",
+          "description": "Titel lesen",
+          "success": true,
+          "data": "Anker 240W USB C Kabel, [2 Stück 1,8m] PD 3.1 Schnellladekabel USB C auf USB C Kabel, USB C Ladekabel für iPhone 17 Pro Max/iPhone Air/16/15 Serie, Samsung Galaxy S25/S24, MacBook Pro/Air, iPad Pro",
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 72.1,
+          "timestamp_start": "2026-04-03T22:05:35Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T22:05:25Z",
+  "timestamp_end": "2026-04-03T22:05:35Z",
+  "duration_ms": 9776.1,
+  "executor_version": "1.0"
+}

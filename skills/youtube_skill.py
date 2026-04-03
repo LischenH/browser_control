@@ -641,6 +641,39 @@ class YouTubeSkill(BaseSkill):
                 logger.info(f"[{self.name}] like(): already liked — skipping")
                 return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
 
+            # Strategy 1: JS-based click (works even when the button is off-screen
+            # or behind a shadow DOM layer that fools CSS wait_for).
+            _JS_CLICK_LIKE_BUTTON = """
+            () => {
+              // Try all known like-button container selectors in priority order
+              const candidates = [
+                document.querySelector('ytd-like-button-renderer button[aria-pressed]'),
+                document.querySelector('ytd-like-button-renderer button[aria-label]'),
+                document.querySelector('#top-level-buttons-computed ytd-like-button-renderer button'),
+                document.querySelector('ytd-segmented-like-dislike-button-renderer ytd-like-button-renderer button'),
+                document.querySelector('#segmented-like-button button'),
+                document.querySelector("button[aria-label='Like']"),
+              ];
+              const btn = candidates.find(b => b && b.getBoundingClientRect().width > 0);
+              if (!btn) return null;
+              btn.scrollIntoView({behavior: 'instant', block: 'center'});
+              btn.click();
+              return btn.getAttribute('aria-pressed');
+            }
+            """
+            js_result = actions.safe_evaluate_js(_JS_CLICK_LIKE_BUTTON, default=None)
+
+            if js_result is not None:
+                # JS click fired — verify state
+                is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
+                if is_liked_after:
+                    logger.info(f"[{self.name}] like() ✅ (via JS click)")
+                    return Result.ok(data={"liked": True, "action": "liked"})
+                # State didn't change — might have been a timing issue, fall through
+                # to selector strategy for a second attempt.
+                logger.debug(f"[{self.name}] like(): JS click fired but state unconfirmed, trying selector")
+
+            # Strategy 2: selector-based wait_for + click (standard path)
             actions.wait_for(selectors=self._selectors["like_button"], timeout=15.0)
             actions.click(selectors=self._selectors["like_button"])
 

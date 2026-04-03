@@ -79,6 +79,7 @@
 
   "_comment_engagement": "Engagement buttons: like, subscribe, save.",
   "like_button": [
+    "#like-button button",
     "ytd-like-button-renderer button[aria-pressed]",
     "ytd-like-button-renderer button[aria-label]",
     "#top-level-buttons-computed ytd-like-button-renderer button",

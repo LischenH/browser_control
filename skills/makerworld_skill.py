@@ -471,7 +471,22 @@ class MakerWorldSkill(BaseSkill):
         """Navigate to MakerWorld search results for the given query."""
         logger.info("[%s] search('%s')", self.name, query)
         try:
-            locale = actions.safe_evaluate_js(_JS_GET_LOCALE, default="en") or "en"
+            # Only read locale from the page if we are already on makerworld.com.
+            # If called from another platform (e.g. Amazon), _JS_GET_LOCALE will
+            # match path segments like '/dp/' and return garbage like 'dp'.
+            try:
+                current_url = actions._page.url  # noqa: SLF001
+            except Exception:
+                current_url = ""
+
+            if "makerworld.com" in current_url:
+                locale = actions.safe_evaluate_js(_JS_GET_LOCALE, default="en") or "en"
+                # Sanity-check: a valid BCP-47 locale is exactly 2 lowercase letters.
+                if not (len(locale) == 2 and locale.isalpha()):
+                    locale = "en"
+            else:
+                locale = "en"
+
             url = f"{_BASE}/{locale}/3d-models?keyword={query.replace(' ', '+')}"
             actions.navigate(url)
             actions.wait_for(
