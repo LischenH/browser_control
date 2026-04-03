@@ -218,13 +218,18 @@ class _TemplateEngine(_PlannerEngine):
         r"(?:watch|scroll|view)\s+(?:next\s+)?(\d+)\s+shorts?",
         re.IGNORECASE,
     )
-    # seek forward/backward with custom delta: "seek forward 30 seconds"
+    # seek forward/backward with custom delta: "seek forward 30 seconds" / "skip forward 30s"
+    # NOTE: plain "forward N seconds" is intentionally excluded here so that
+    # "forward 10 seconds" still maps to the fixed forward_10s action via _kw.
     _RE_SEEK_FORWARD = re.compile(
-        r"(?:seek|skip)\s+forward\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)?|forward\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)",
+        r"(?:seek|skip)\s+forward\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)?",
         re.IGNORECASE,
     )
+    # "seek/skip backward/back/rewind N seconds" with custom delta.
+    # NOTE: plain "back N seconds" / "go back N" excluded so that
+    # "go back 10 seconds" / "back 10" still maps to back_10s via _kw.
     _RE_SEEK_BACKWARD = re.compile(
-        r"(?:seek|skip)\s+(?:back(?:ward)?|rewind)\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)?|(?:rewind|back)\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)",
+        r"(?:seek|skip)\s+(?:back(?:ward)?|rewind)\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)?|rewind\s+(\d+\.?\d*)\s*(?:seconds?|secs?|s\b)",
         re.IGNORECASE,
     )
     # Amazon read reviews: "read 5 reviews", "show 3 reviews"
@@ -359,10 +364,10 @@ class _TemplateEngine(_PlannerEngine):
         # Phase 10.1: "seek forward 30s"
         sf_m = self._RE_SEEK_FORWARD.search(g)
         if sf_m:
-            secs = float(sf_m.group(1) or sf_m.group(2) or 10)
+            secs = float(sf_m.group(1) or 10)
             return [self._yt_step("seek_forward", f"Seek forward {secs}s", seconds=secs)]
 
-        # Phase 10.1: "rewind 30s"  
+        # Phase 10.1: "rewind 30s" / "seek backward 30s"
         sb_m = self._RE_SEEK_BACKWARD.search(g)
         if sb_m:
             secs = float(sb_m.group(1) or sb_m.group(2) or 10)
@@ -730,6 +735,13 @@ class _TemplateEngine(_PlannerEngine):
                                         "#contents ytd-item-section-renderer ytd-video-renderer"],
                  },
                  description=f"Search for '{query}'"),
+            Step(url="youtube.com", action_name="click_first_video",
+                 params={},
+                 verify_conditions={
+                     "url_contains": "watch",
+                     "element_exists": [".ytp-play-button", "video", "#movie_player"],
+                 },
+                 description="Click first video result"),
         ]
 
     @staticmethod
@@ -820,6 +832,13 @@ class _TemplateEngine(_PlannerEngine):
                      "element_exists": ["div[data-component-type='s-search-result']"],
                  },
                  description=f"Search for '{query}'"),
+            Step(url="amazon", action_name="click_first_result",
+                 params={},
+                 verify_conditions={
+                     "url_contains": "/dp/",
+                     "element_exists": ["#productTitle", "span#productTitle"],
+                 },
+                 description="Click first result"),
         ]
 
     @staticmethod

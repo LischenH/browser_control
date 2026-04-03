@@ -1,0 +1,58 @@
+{
+  "session_id": "bc69cf8986_23bc",
+  "goal": "",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": false,
+  "steps_total": 2,
+  "steps_completed": 1,
+  "error_message": "Step 'search': verification failed. Reason: Bedingung 'url_contains' nicht erfüllt: URL 'https://www.youtube.com/?themeRefresh=1' enthält 'results' nicht.",
+  "tabs": [
+    {
+      "tab_index": 41,
+      "url": "about:blank",
+      "title": "",
+      "success": false,
+      "steps_completed": 1,
+      "total_duration_ms": 55832.3,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "navigate",
+          "description": "Navigate to YouTube",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "Alle Bedingungen erfüllt.",
+          "retries_used": 0,
+          "duration_ms": 30027.2,
+          "timestamp_start": "2026-04-03T09:33:58Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "search",
+          "description": "Search for 'lo-fi music'",
+          "success": false,
+          "data": null,
+          "error_message": "Step 'search': verification failed. Reason: Bedingung 'url_contains' nicht erfüllt: URL 'https://www.youtube.com/?themeRefresh=1' enthält 'results' nicht.",
+          "verify_status": "fail",
+          "verify_reason": "Bedingung 'url_contains' nicht erfüllt: URL 'https://www.youtube.com/?themeRefresh=1' enthält 'results' nicht.",
+          "retries_used": 0,
+          "duration_ms": 25805.1,
+          "timestamp_start": "2026-04-03T09:34:28Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T09:33:58Z",
+  "timestamp_end": "2026-04-03T09:34:58Z",
+  "duration_ms": 59754.7,
+  "executor_version": "1.0"
+}

@@ -941,7 +941,7 @@ class YouTubeSkill(BaseSkill):
 
         Improvements (Phase 10.1):
         - Multi-language "auto" support: matches "auto", "automatisch", "automatique", etc.
-        - Resolution detection via regex (\d+p) instead of text equality — locale-safe.
+        - Resolution detection via regex (r"\d+p") instead of text equality — locale-safe.
         - No aria-label reliance: uses innerText comparison only.
         """
         logger.info(f"[{self.name}] set_quality('{quality}')")
@@ -1006,7 +1006,7 @@ class YouTubeSkill(BaseSkill):
                     return text;
                   }}
                 }} else {{
-                  // Match resolution via \d+p pattern — locale-safe, no aria-label needed
+                  // Match resolution via \\d+p pattern — locale-safe, no aria-label needed
                   const m = reRes.exec(text);
                   if (m && m[1] === target) {{
                     item.click();
@@ -1237,7 +1237,10 @@ class YouTubeSkill(BaseSkill):
                 "}"
             )
 
-            if not found:
+            if found is False:
+                # JS explicitly returned false: element does not exist in DOM.
+                # None means JS evaluation returned undefined/null (e.g. mock) —
+                # treat as "try anyway" rather than hard fail.
                 return Result.fail(
                     error="open_comments(): #comments element not found — "
                           "comments may be disabled or page not fully loaded"

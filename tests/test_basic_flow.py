@@ -83,7 +83,10 @@ def test_basic_flow():
 
     # -- Browser + Skills vorbereiten -----------------------------------------
     conn = BrowserConnection()
-    conn.launch()  # startet den Browser (headless je nach config.py)
+    conn.connect()  # verbindet mit dem bereits laufenden Chrome via CDP
+    #
+    # HINWEIS: BrowserConnection verbindet sich mit einem LAUFENDEN Chrome-Prozess
+    # (gestartet mit --remote-debugging-port=9222). Sie startet keinen neuen Browser.
 
     skill_mgr = SkillManager(
         skills=[YouTubeSkill(), AmazonSkill(), MakerWorldSkill()]

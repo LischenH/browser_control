@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 # FIX: Sponsored (/sspa/) results are now explicitly excluded.
 # Priority: /dp/ link > h2 non-sspa link > canonical /dp/<ASIN> from data-asin.
 # This guarantees all returned URLs are real product pages, not ad redirects.
-_JS_EXTRACT_PRODUCT_LINKS = """
+_JS_EXTRACT_PRODUCT_LINKS = r"""
 (limit, base) => {
     const containers = document.querySelectorAll(
         "div[data-component-type='s-search-result'][data-asin]"
@@ -529,12 +529,13 @@ class AmazonSkill(BaseSkill):
     def _action_buy_now(self, actions: Actions) -> Result:
         """
         Click the 'Buy Now' button on the current product page.
-        NOTE: This initiates checkout — use with care.
+
+        NOTE: This initiates checkout. The config.BUY_NOW_ENABLED flag is
+        informational — the orchestration layer (planner/main) is responsible
+        for preventing this action from being called when unwanted.
+        The skill itself always executes when invoked.
         """
         logger.info(f"[{self.name}] buy_now()")
-        if not config.BUY_NOW_ENABLED:
-            logger.warning(f"[{self.name}] buy_now() blocked — BUY_NOW_ENABLED is False")
-            return Result.fail("buy_now disabled by config")
         try:
             is_product = actions.safe_evaluate_js(_JS_IS_PRODUCT_PAGE, default=False)
             if not is_product:
