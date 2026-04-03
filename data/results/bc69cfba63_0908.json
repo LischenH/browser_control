@@ -1,0 +1,45 @@
+{
+  "session_id": "bc69cfba63_0908",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": false,
+  "steps_total": 3,
+  "steps_completed": 0,
+  "error_message": "Action 'mw_search' not found on skill 'Generic'. Check: get_action('mw_search') must return a Callable.",
+  "tabs": [
+    {
+      "tab_index": 8,
+      "url": "chrome://new-tab-page/",
+      "title": "Neuer Tab",
+      "success": false,
+      "steps_completed": 0,
+      "total_duration_ms": 0.0,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "mw_search",
+          "description": "Suche: benchy",
+          "success": false,
+          "data": null,
+          "error_message": "Action 'mw_search' not found on skill 'Generic'. Check: get_action('mw_search') must return a Callable.",
+          "verify_status": "none",
+          "verify_reason": "",
+          "retries_used": 0,
+          "duration_ms": 0.0,
+          "timestamp_start": "2026-04-03T13:02:27Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T13:02:27Z",
+  "timestamp_end": "2026-04-03T13:02:27Z",
+  "duration_ms": 9.6,
+  "executor_version": "1.0"
+}
