@@ -179,7 +179,7 @@ class AmazonSkill(BaseSkill):
             "read_rating":           self._action_read_rating,
             "read_reviews":          self._action_read_reviews,
             # ── Aliases ──────────────────────────────────────────────────────
-            "open_search_result":    self._action_click_first_result,  # test-facing alias
+            "open_search_result":    self._action_open_search_result,  # test-facing alias (accepts index)
         }
         action = _action_map.get(name)
         if action is None:
@@ -193,6 +193,13 @@ class AmazonSkill(BaseSkill):
     def _action_search(self, actions: Actions, query: str) -> Result:
         logger.info(f"[{self.name}] search('{query}')")
         try:
+            # If not already on Amazon, navigate there first so subsequent
+            # steps are correctly routed to this skill.
+            try:
+                if "amazon" not in actions._page.url:  # noqa: SLF001
+                    actions.navigate("https://www.amazon.de")
+            except Exception:
+                pass
             actions.wait_for(selectors=self._selectors["search_box"], timeout=15.0)
             actions.type_text(selectors=self._selectors["search_box"], text=query)
             actions.press_key("Enter")
@@ -203,6 +210,34 @@ class AmazonSkill(BaseSkill):
             return Result.fail(error=f"search('{query}'): {e}")
         except Exception as e:
             return Result.fail(error=f"search(): {type(e).__name__}: {e}")
+
+    def _action_open_search_result(self, actions: Actions, index: int = 0) -> Result:
+        """
+        Opens the Amazon search result at the given 0-based index.
+        index=0 → first result (same as click_first_result).
+        """
+        logger.info(f"[{self.name}] open_search_result(index={index})")
+        if index == 0:
+            return self._action_click_first_result(actions)
+        try:
+            page = actions._page  # noqa: SLF001
+            base_url = _amazon_base(page.url)
+            raw_urls: list[str] = actions.evaluate_js(
+                f"({_JS_EXTRACT_PRODUCT_LINKS})({(index + 1) * 3}, {base_url!r})"
+            )
+            if not raw_urls or len(raw_urls) <= index:
+                return Result.fail(
+                    error=f"open_search_result(index={index}): not enough results found"
+                )
+            url = raw_urls[index]
+            actions.navigate(url)
+            actions.wait_for(selectors=self._selectors["product_title"], timeout=20.0)
+            logger.info(f"[{self.name}] open_search_result(index={index}) ✅")
+            return Result.ok(data={"url": url, "index": index})
+        except ActionError as e:
+            return Result.fail(error=f"open_search_result(index={index}): {e}")
+        except Exception as e:
+            return Result.fail(error=f"open_search_result(): {type(e).__name__}: {e}")
 
     def _action_click_first_result(self, actions: Actions) -> Result:
         logger.info(f"[{self.name}] click_first_result()")

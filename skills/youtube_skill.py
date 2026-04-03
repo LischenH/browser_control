@@ -383,7 +383,7 @@ class YouTubeSkill(BaseSkill):
             "pause_video":            self._action_pause,            # alias for pause()
             "like_current":           self._action_like,             # natural-language alias
             "subscribe_channel":      self._action_subscribe,        # natural-language alias
-            "open_search_result":     self._action_click_first_video, # test-facing alias
+            "open_search_result":     self._action_open_search_result,  # test-facing alias (accepts index)
         }
         action = _action_map.get(name)
         if action is None:
@@ -426,6 +426,13 @@ class YouTubeSkill(BaseSkill):
     def _action_search(self, actions: Actions, query: str) -> Result:
         logger.info(f"[{self.name}] search('{query}')")
         try:
+            # If not already on YouTube, navigate there first so subsequent
+            # steps are correctly routed to this skill.
+            try:
+                if "youtube.com" not in actions._page.url:  # noqa: SLF001
+                    actions.navigate("https://www.youtube.com")
+            except Exception:
+                pass
             actions.wait_for(selectors=self._selectors["search_box"], timeout=15.0)
             actions.type_text(selectors=self._selectors["search_box"], text=query)
             actions.press_key("Enter")
@@ -435,6 +442,41 @@ class YouTubeSkill(BaseSkill):
             return Result.fail(error=f"search('{query}'): {e}")
         except Exception as e:
             return Result.fail(error=f"search(): {type(e).__name__}: {e}")
+
+    def _action_open_search_result(self, actions: Actions, index: int = 0) -> Result:
+        """
+        Opens the search result at the given 0-based index.
+        index=0 → first result (same as click_first_video).
+        Higher indices click the nth result link.
+        """
+        logger.info(f"[{self.name}] open_search_result(index={index})")
+        if index == 0:
+            return self._action_click_first_video(actions)
+        # For index > 0: collect all result links and click the nth one.
+        try:
+            actions.wait_for(selectors=self._selectors["video_result_item"], timeout=10.0)
+            links = actions.get_all_hrefs(
+                selectors=self._selectors.get("first_video_link", ["a[href*='/watch?v=']",
+                                                                       "a[href*='/shorts/'"]),
+                limit=index + 1,
+            )
+            if len(links) <= index:
+                return Result.fail(
+                    error=f"open_search_result(index={index}): only {len(links)} results found"
+                )
+            url = links[index]
+            if not url.startswith("http"):
+                url = "https://www.youtube.com" + url
+            actions.navigate(url)
+            actions.wait_for(
+                selectors=self._selectors["video_title"] + ["video", "#movie_player"],
+                timeout=15.0,
+            )
+            return Result.ok(data={"url": url, "index": index})
+        except ActionError as e:
+            return Result.fail(error=f"open_search_result(index={index}): {e}")
+        except Exception as e:
+            return Result.fail(error=f"open_search_result(): {type(e).__name__}: {e}")
 
     def _action_click_first_video(self, actions: Actions) -> Result:
         """

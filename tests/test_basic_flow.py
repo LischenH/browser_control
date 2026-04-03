@@ -39,6 +39,14 @@ def _run_flow(executor, steps_raw: list[dict], label: str) -> dict:
     """
     Wandelt rohe Dicts in Step-Objekte um, führt sie aus und gibt das
     Ergebnis zurück.  Gibt außerdem eine Zusammenfassung auf stdout aus.
+
+    Step-Dict-Felder:
+      action  : str        -- Action-Name
+      kwargs  : dict       -- Keyword-Argumente für die Action
+      desc    : str        -- Beschreibung (optional)
+      url     : str        -- URL-Hint für Skill-Routing (optional).
+                             Wenn gesetzt, wird der Step auf dem Skill geroutet,
+                             der diese URL verarbeiten kann (statt aktuellem Tab).
     """
     from agent.planner import Step
 
@@ -48,7 +56,7 @@ def _run_flow(executor, steps_raw: list[dict], label: str) -> dict:
             params=s.get("kwargs", {}),
             description=s.get("desc", ""),
             verify_conditions={},
-            url="",
+            url=s.get("url", ""),  # URL-Hint → korrektes Skill-Routing pro Flow
         )
         for s in steps_raw
     ]
@@ -71,6 +79,10 @@ def test_basic_flow():
     """
     Vollständiger Drei-Plattform-Flow:
       YouTube → Amazon → MakerWorld
+
+    Jeder Flow gibt einen URL-Hint ("url") in den Step-Dicts an, damit der
+    Executor den richtigen Skill auswählt – auch wenn der Browser gerade
+    auf einer anderen Plattform ist.
     """
     # -- Imports ---------------------------------------------------------------
     from core.browser import BrowserConnection
@@ -103,9 +115,11 @@ def test_basic_flow():
     )
 
     # ── Flow 1: YouTube ────────────────────────────────────────────────────────
+    # url-Hint stellt sicher, dass YouTubeSkill geroutet wird, egal welche
+    # Seite gerade aktiv ist.
     yt_steps = [
-        {"action": "search",             "kwargs": {"query": "lofi"},  "desc": "Suche: lofi"},
-        {"action": "open_search_result", "kwargs": {"index": 0},       "desc": "Erstes Video öffnen"},
+        {"action": "search",             "kwargs": {"query": "lofi"},  "desc": "Suche: lofi",        "url": "https://www.youtube.com"},
+        {"action": "open_search_result", "kwargs": {"index": 0},       "desc": "Erstes Video öffnen","url": "https://www.youtube.com"},
         {"action": "like_video",         "kwargs": {},                  "desc": "Video liken"},
         {"action": "pause",              "kwargs": {},                  "desc": "Video pausieren"},
     ]
@@ -113,13 +127,14 @@ def test_basic_flow():
 
     # ── Flow 2: Amazon ─────────────────────────────────────────────────────────
     amz_steps = [
-        {"action": "search",             "kwargs": {"query": "usb c kabel"}, "desc": "Suche: USB-C"},
-        {"action": "open_search_result", "kwargs": {"index": 0},            "desc": "Erstes Produkt öffnen"},
+        {"action": "search",             "kwargs": {"query": "usb c kabel"}, "desc": "Suche: USB-C",          "url": "https://www.amazon.de"},
+        {"action": "open_search_result", "kwargs": {"index": 0},            "desc": "Erstes Produkt öffnen",  "url": "https://www.amazon.de"},
         {"action": "read_product_title", "kwargs": {},                       "desc": "Titel lesen"},
     ]
     amz_result = _run_flow(executor, amz_steps, "Amazon")
 
     # ── Flow 3: MakerWorld ─────────────────────────────────────────────────────
+    # mw_* Aktionen sind eindeutig → kein URL-Hint nötig
     mw_steps = [
         {"action": "mw_search",   "kwargs": {"query": "benchy"}, "desc": "Suche: benchy"},
         {"action": "mw_open_top", "kwargs": {},                  "desc": "Erstes Modell öffnen"},

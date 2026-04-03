@@ -1,0 +1,58 @@
+{
+  "session_id": "bc69cfbc54_db58",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": false,
+  "steps_total": 3,
+  "steps_completed": 1,
+  "error_message": "Unexpected error in action 'open_search_result': TypeError: YouTubeSkill._action_click_first_video() got an unexpected keyword argument 'index'",
+  "tabs": [
+    {
+      "tab_index": 11,
+      "url": "chrome://new-tab-page/",
+      "title": "Neuer Tab",
+      "success": false,
+      "steps_completed": 1,
+      "total_duration_ms": 15760.2,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "search",
+          "description": "Suche: USB-C",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 15759.9,
+          "timestamp_start": "2026-04-03T13:10:44Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "open_search_result",
+          "description": "Erstes Produkt öffnen",
+          "success": false,
+          "data": null,
+          "error_message": "Unexpected error in action 'open_search_result': TypeError: YouTubeSkill._action_click_first_video() got an unexpected keyword argument 'index'",
+          "verify_status": "none",
+          "verify_reason": "",
+          "retries_used": 0,
+          "duration_ms": 0.3,
+          "timestamp_start": "2026-04-03T13:11:00Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T13:10:44Z",
+  "timestamp_end": "2026-04-03T13:11:00Z",
+  "duration_ms": 15764.7,
+  "executor_version": "1.0"
+}

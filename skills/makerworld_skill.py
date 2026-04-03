@@ -429,7 +429,7 @@ class MakerWorldSkill(BaseSkill):
             "compare_models":        self._action_compare_models,
             # ── mw_* Aliases (Planner-facing names) ────────────────────────────
             "mw_search":             self._action_search,
-            "mw_open_top":           self._action_get_search_results,
+            "mw_open_top":           self._action_open_top_model,
             "mw_get_info":           self._action_get_model_info,
             "mw_get_results":        self._action_get_search_results,
             "mw_like":               self._action_like,
@@ -506,9 +506,52 @@ class MakerWorldSkill(BaseSkill):
         except Exception as e:
             return Result.fail(error=f"get_search_results(): {type(e).__name__}: {e}")
 
+    def _action_open_top_model(self, actions: Actions, index: int = 0) -> Result:
+        """
+        mw_open_top: Extract search results and navigate to the model at `index`.
+
+        Unlike get_search_results() (which only returns card data), this action
+        actually navigates to the model page so that mw_get_info() can then
+        extract live metadata from the real DOM.
+        """
+        logger.info("[%s] open_top_model(index=%d)", self.name, index)
+        try:
+            # Scroll to load lazy cards
+            for _ in range(3):
+                actions.scroll("down", 400)
+                time.sleep(0.4)
+            actions.scroll("up", 9999)
+
+            results = actions.safe_evaluate_js(
+                f"({_JS_EXTRACT_MODEL_CARDS})({index + 5})", default=[]
+            ) or []
+
+            if not results:
+                return Result.fail(error="open_top_model(): no model cards found on page")
+            if len(results) <= index:
+                return Result.fail(
+                    error=f"open_top_model(index={index}): only {len(results)} models found"
+                )
+
+            target = results[index]
+            url = target.get("url", "")
+            if not url:
+                return Result.fail(error="open_top_model(): model card has no URL")
+
+            logger.info("[%s] open_top_model: navigating to '%s'", self.name, url[:80])
+            actions.navigate(url)
+            actions.wait_for(
+                selectors=self._selectors["model_page_root"], timeout=15.0
+            )
+            logger.info("[%s] open_top_model() ✅ -> %s", self.name, url[:60])
+            return Result.ok(data={"url": url, "title": target.get("title", ""), "index": index})
+        except ActionError as e:
+            return Result.fail(error=f"open_top_model(): {e}")
+        except Exception as e:
+            return Result.fail(error=f"open_top_model(): {type(e).__name__}: {e}")
+
     def _action_get_model_info(self, actions: Actions) -> Result:
         """Extract metadata from the currently open model page."""
-        logger.info("[%s] get_model_info()", self.name)
         try:
             raw = actions.safe_evaluate_js(_JS_GET_MODEL_INFO, default="{}")
             try:

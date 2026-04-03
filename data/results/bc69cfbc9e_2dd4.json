@@ -1,0 +1,166 @@
+{
+  "session_id": "bc69cfbc9e_2dd4",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": true,
+  "steps_total": 3,
+  "steps_completed": 3,
+  "error_message": "",
+  "tabs": [
+    {
+      "tab_index": 11,
+      "url": "https://makerworld.com/de/3d-models?keyword=usb+c+kabel",
+      "title": "3D-Modelle - MakerWorld",
+      "success": true,
+      "steps_completed": 3,
+      "total_duration_ms": 4961.2,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "mw_search",
+          "description": "Suche: benchy",
+          "success": true,
+          "data": {
+            "query": "benchy",
+            "url": "https://makerworld.com/de/3d-models?keyword=benchy"
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 3663.7,
+          "timestamp_start": "2026-04-03T13:11:58Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "mw_open_top",
+          "description": "Erstes Modell öffnen",
+          "success": true,
+          "data": {
+            "results": [
+              {
+                "title": "Der Strand - Benchy",
+                "url": "https://makerworld.com/de/models/2602231-the-beach-benchy",
+                "author": "Etlar Design",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Pokémon Benchy | Garados",
+                "url": "https://makerworld.com/de/models/2584287-pokemon-benchy-gyarados",
+                "author": "Galerious",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Eine Benchy",
+                "url": "https://makerworld.com/de/models/2604091-a-benchy",
+                "author": "300% Scale",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Benchy",
+                "url": "https://makerworld.com/de/models/2581659-benchy",
+                "author": "MLH811",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Halo Benchy",
+                "url": "https://makerworld.com/de/models/2603176-halo-benchy",
+                "author": "Burris_3D",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "B2- Benchy",
+                "url": "https://makerworld.com/de/models/2607041-b2-benchy",
+                "author": "TEC 3D Printing",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "benchy mini",
+                "url": "https://makerworld.com/de/models/2599361-benchy-mini",
+                "author": "Alex3d✅",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Polizei-Benchy",
+                "url": "https://makerworld.com/de/models/2585341-police-benchy",
+                "author": "Crafti",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Benchy",
+                "url": "https://makerworld.com/de/models/2593597-benchy",
+                "author": "user_613315648",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              },
+              {
+                "title": "Drachenboot - Gokus Benchy",
+                "url": "https://makerworld.com/de/models/2603643-dragon-boat-goku-s-benchy",
+                "author": "FabioTan",
+                "likes": "",
+                "downloads": "",
+                "views": ""
+              }
+            ],
+            "count": 10
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 1238.6,
+          "timestamp_start": "2026-04-03T13:12:02Z"
+        },
+        {
+          "step_index": 2,
+          "action_name": "mw_get_info",
+          "description": "Modelldaten lesen",
+          "success": true,
+          "data": {
+            "url": "https://makerworld.com/de/3d-models?keyword=benchy",
+            "title": "3D-Modelle",
+            "author": "Verlauf",
+            "description": "Entdecken Sie unsere Kategorie „Alle“, die unsere gesamte Sammlung von 3D-Druckmodellen an einem Ort enthält. Stöbern Sie durch unser vielfältiges Modellsortiment und finden Sie das perfekte Modell für Ihr Projekt oder Ihren persönlichen Einsatz. Beginnen Sie noch heute mit dem Entdecken und Gestalt",
+            "tags": "",
+            "is_liked": "None",
+            "is_collected": "None"
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 58.9,
+          "timestamp_start": "2026-04-03T13:12:03Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T13:11:58Z",
+  "timestamp_end": "2026-04-03T13:12:03Z",
+  "duration_ms": 4965.0,
+  "executor_version": "1.0"
+}
