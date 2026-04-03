@@ -1,0 +1,86 @@
+{
+  "session_id": "bc69d03874_d948",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": true,
+  "steps_total": 3,
+  "steps_completed": 3,
+  "error_message": "",
+  "tabs": [
+    {
+      "tab_index": 11,
+      "url": "https://www.amazon.de/stores/page/EFF12A65-CCAA-4E8F-AA22-522A6433EDF3/?_encoding=UTF8&store_ref=SB_A09589611X5I3ENZYV4J3-A05543443JHKM7FJ2RSB6&pd_rd_plhdr=t&aaxitk=ea54b9a36b3efafe7a26ccec3de8fd6a&hsa_cr_id=0&lp_asins=B08KLT2723%2CB0BFWPRCGC%2CB08KLYGVQQ&lp_query=usb%20c%20kabel&lp_slot=auto-sparkle-hsa-tetris&aref=753tQtcyGD&ref_=sbx_be_s_sparkle_ssd_hl&pd_rd_w=DFdsO&content-id=amzn1.sym.67616a74-5971-4136-9787-0edce4b0e77e%3Aamzn1.sym.67616a74-5971-4136-9787-0edce4b0e77e&pf_rd_p=67616a74-5971-4136-9787-0edce4b0e77e&pf_rd_r=048SB8EVY32EC9A1XTC3&pd_rd_wg=SHgY8&pd_rd_r=f59f5231-5194-4a8f-9105-3f4c811d3985",
+      "title": "Pokémon Benchy | Garados – Kostenloses 3D-Druckmodell – MakerWorld",
+      "success": true,
+      "steps_completed": 3,
+      "total_duration_ms": 7306.5,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "mw_search",
+          "description": "Suche: benchy",
+          "success": true,
+          "data": {
+            "query": "benchy",
+            "url": "https://makerworld.com/en/3d-models?keyword=benchy"
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 3945.4,
+          "timestamp_start": "2026-04-03T22:00:20Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "mw_open_top",
+          "description": "Erstes Modell öffnen",
+          "success": true,
+          "data": {
+            "url": "https://makerworld.com/de/models/2584287-pokemon-benchy-gyarados",
+            "title": "Pokémon Benchy | Garados",
+            "index": 0
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 3346.8,
+          "timestamp_start": "2026-04-03T22:00:24Z"
+        },
+        {
+          "step_index": 2,
+          "action_name": "mw_get_info",
+          "description": "Modelldaten lesen",
+          "success": true,
+          "data": {
+            "url": "https://makerworld.com/de/models/2584287-pokemon-benchy-gyarados#profileId-2850691",
+            "title": "Pokémon Benchy | Garados",
+            "author": "Verlauf",
+            "description": "Sie dürfen weder die digitalen noch die 3D-gedruckten Versionen dieses Objekts noch andere abgeleitete Werke dieses Objekts in digitalem oder physischem Format (unter anderem Remixe dieses Objekts und das Hosting auf anderen digitalen Plattformen) teilen, unterlizenzieren, verkaufen, vermieten, host",
+            "tags": "",
+            "is_liked": "False",
+            "is_collected": "True"
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 14.3,
+          "timestamp_start": "2026-04-03T22:00:27Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T22:00:20Z",
+  "timestamp_end": "2026-04-03T22:00:27Z",
+  "duration_ms": 7311.0,
+  "executor_version": "1.0"
+}

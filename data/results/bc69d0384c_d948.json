@@ -1,0 +1,71 @@
+{
+  "session_id": "bc69d0384c_d948",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": true,
+  "steps_total": 3,
+  "steps_completed": 3,
+  "error_message": "",
+  "tabs": [
+    {
+      "tab_index": 11,
+      "url": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+      "title": "Amazon.de: Sweguard",
+      "success": true,
+      "steps_completed": 3,
+      "total_duration_ms": 39548.0,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "search",
+          "description": "Suche: USB-C",
+          "success": true,
+          "data": "usb c kabel",
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 4110.5,
+          "timestamp_start": "2026-04-03T21:59:40Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "open_search_result",
+          "description": "Erstes Produkt öffnen",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 24669.4,
+          "timestamp_start": "2026-04-03T21:59:45Z"
+        },
+        {
+          "step_index": 2,
+          "action_name": "read_product_title",
+          "description": "Titel lesen",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 10768.1,
+          "timestamp_start": "2026-04-03T22:00:09Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T21:59:40Z",
+  "timestamp_end": "2026-04-03T22:00:20Z",
+  "duration_ms": 39552.5,
+  "executor_version": "1.0"
+}

@@ -240,13 +240,29 @@ class AmazonSkill(BaseSkill):
             return Result.fail(error=f"open_search_result(): {type(e).__name__}: {e}")
 
     def _action_click_first_result(self, actions: Actions) -> Result:
+        """
+        Navigate to the first organic Amazon product result.
+
+        Uses the JS ASIN extractor (same as open_top_results) instead of clicking
+        a DOM element.  This guarantees we land on a real /dp/<ASIN> product page
+        and never on a brand store (/stores/page/) or sponsored redirect (/sspa/).
+        """
         logger.info(f"[{self.name}] click_first_result()")
         try:
-            actions.wait_for(selectors=self._selectors["result_item"], timeout=15.0)
-            actions.click(selectors=self._selectors["first_result_link"])
+            page = actions._page  # noqa: SLF001
+            base_url = _amazon_base(page.url)
+            # Request 5 candidates; extractor already filters sponsored/sspa links.
+            raw_urls: list[str] = actions.evaluate_js(
+                f"({_JS_EXTRACT_PRODUCT_LINKS})(5, {base_url!r})"
+            )
+            if not raw_urls:
+                return Result.fail(error="click_first_result(): no product links found on page")
+            url = raw_urls[0]
+            logger.info(f"[{self.name}] click_first_result(): navigating to {url[:80]}")
+            actions.navigate(url)
             actions.wait_for(selectors=self._selectors["product_title"], timeout=20.0)
             logger.info(f"[{self.name}] click_first_result() ✅")
-            return Result.ok()
+            return Result.ok(data={"url": url})
         except ActionError as e:
             return Result.fail(error=f"click_first_result(): {e}")
         except Exception as e:

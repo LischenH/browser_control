@@ -1,0 +1,86 @@
+{
+  "session_id": "bc69d0381c_d948",
+  "goal": "test_basic_flow: YouTube + Amazon + MakerWorld",
+  "skill_names": [
+    "YouTube",
+    "Amazon",
+    "MakerWorld",
+    "Generic"
+  ],
+  "success": true,
+  "steps_total": 4,
+  "steps_completed": 4,
+  "error_message": "",
+  "tabs": [
+    {
+      "tab_index": 11,
+      "url": "https://makerworld.com/de/3d-models?keyword=benchy",
+      "title": "(17) Lo-Fi-Hip-Hop-Radio 📚 Beats zum Entspannen/Lernen - YouTube",
+      "success": true,
+      "steps_completed": 4,
+      "total_duration_ms": 48288.2,
+      "steps": [
+        {
+          "step_index": 0,
+          "action_name": "search",
+          "description": "Suche: lofi",
+          "success": true,
+          "data": "lofi",
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 17628.7,
+          "timestamp_start": "2026-04-03T21:58:52Z"
+        },
+        {
+          "step_index": 1,
+          "action_name": "open_search_result",
+          "description": "Erstes Video öffnen",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 11730.7,
+          "timestamp_start": "2026-04-03T21:59:10Z"
+        },
+        {
+          "step_index": 2,
+          "action_name": "like_video",
+          "description": "Video liken",
+          "success": true,
+          "data": null,
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 15036.1,
+          "timestamp_start": "2026-04-03T21:59:22Z"
+        },
+        {
+          "step_index": 3,
+          "action_name": "pause",
+          "description": "Video pausieren",
+          "success": true,
+          "data": {
+            "paused": true
+          },
+          "error_message": "",
+          "verify_status": "pass",
+          "verify_reason": "No verify conditions -- auto pass.",
+          "retries_used": 0,
+          "duration_ms": 3892.7,
+          "timestamp_start": "2026-04-03T21:59:37Z"
+        }
+      ],
+      "opened_tabs": []
+    }
+  ],
+  "opened_tabs": [],
+  "timestamp_start": "2026-04-03T21:58:52Z",
+  "timestamp_end": "2026-04-03T21:59:40Z",
+  "duration_ms": 48296.9,
+  "executor_version": "1.0"
+}

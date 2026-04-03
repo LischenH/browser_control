@@ -627,12 +627,21 @@ class YouTubeSkill(BaseSkill):
         """Like the current video or short. Idempotent — skips if already liked."""
         logger.info(f"[{self.name}] like()")
         try:
+            # Scroll down slightly so the video metadata section (which contains
+            # the like button) is rendered into the DOM.  On fresh page loads
+            # YouTube lazy-renders below-the-fold content; without a scroll the
+            # like button wait_for times out even though the video is playing.
+            try:
+                actions.scroll("down", 300)
+            except Exception:
+                pass
+
             is_liked = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
             if is_liked is True:
                 logger.info(f"[{self.name}] like(): already liked — skipping")
                 return Result.ok(data={"liked": True, "action": "skipped_already_liked"})
 
-            actions.wait_for(selectors=self._selectors["like_button"], timeout=10.0)
+            actions.wait_for(selectors=self._selectors["like_button"], timeout=15.0)
             actions.click(selectors=self._selectors["like_button"])
 
             is_liked_after = actions.safe_evaluate_js(_JS_IS_LIKED, default=None)
