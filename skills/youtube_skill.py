@@ -383,6 +383,7 @@ class YouTubeSkill(BaseSkill):
             "pause_video":            self._action_pause,            # alias for pause()
             "like_current":           self._action_like,             # natural-language alias
             "subscribe_channel":      self._action_subscribe,        # natural-language alias
+            "open_search_result":     self._action_click_first_video, # test-facing alias
         }
         action = _action_map.get(name)
         if action is None:

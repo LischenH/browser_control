@@ -267,6 +267,29 @@ class Executor:
 
             # -- Step 2: Get action function ------------------------------------
             action_fn = skill.get_action(step.action_name)
+
+            # -- Step 2b: Action-capability fallback ---------------------------
+            # If the URL-routed skill doesn't know this action (e.g. because
+            # the active page is chrome://new-tab-page/ or about:blank and
+            # routing fell through to Generic), scan all other registered
+            # skills and use the first one that CAN handle the action.
+            # This lets flows work even when the browser starts on a blank tab.
+            if action_fn is None:
+                for fallback_skill in self._skill_manager._skills:
+                    if fallback_skill is skill:
+                        continue  # already tried this one
+                    candidate = fallback_skill.get_action(step.action_name)
+                    if candidate is not None:
+                        logger.info(
+                            "[Executor]   Skill fallback: '%s' → '%s' "
+                            "(action '%s' not found on '%s')",
+                            skill.name, fallback_skill.name,
+                            step.action_name, skill.name,
+                        )
+                        skill = fallback_skill
+                        action_fn = candidate
+                        break
+
             if action_fn is None:
                 msg = (
                     f"Action '{step.action_name}' not found on skill '{skill.name}'. "

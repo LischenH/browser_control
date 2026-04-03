@@ -178,6 +178,8 @@ class AmazonSkill(BaseSkill):
             "read_price":            self._action_read_price,
             "read_rating":           self._action_read_rating,
             "read_reviews":          self._action_read_reviews,
+            # ── Aliases ──────────────────────────────────────────────────────
+            "open_search_result":    self._action_click_first_result,  # test-facing alias
         }
         action = _action_map.get(name)
         if action is None:
