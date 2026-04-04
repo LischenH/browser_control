@@ -79,13 +79,17 @@
 
   "_comment_engagement": "Engagement buttons: like, subscribe, save.",
   "like_button": [
+    "like-button-view-model button[aria-pressed]",
+    "like-button-view-model button",
     "#like-button button",
     "ytd-like-button-renderer button[aria-pressed]",
     "ytd-like-button-renderer button[aria-label]",
     "#top-level-buttons-computed ytd-like-button-renderer button",
     "ytd-segmented-like-dislike-button-renderer ytd-like-button-renderer button",
     "#segmented-like-button button",
-    "button[aria-label='Like']"
+    "button[aria-label='Like']",
+    "button[aria-label='Gefallt mir']",
+    "button[aria-label*='like' i]:not([aria-label*='dislike' i])"
   ],
   "_comment_like_button_removed": "Removed 'button[aria-label*=like i]' — case-insensitive partial match also matches the Unlike button (aria-label contains 'like'), causing accidental double-toggle when video is already liked.",
   "unlike_button": [

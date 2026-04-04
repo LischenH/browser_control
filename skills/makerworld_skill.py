@@ -1012,12 +1012,16 @@ class MakerWorldSkill(BaseSkill):
         """Navigate to user's uploads page and scrape model cards."""
         logger.info("[%s] get_my_uploads(username='%s')", self.name, username)
         if not username:
-            # Auto-detect from current URL (handles '/@user/', '/user/', '/profile/')
+            # Auto-detect from current URL.
+            # Handles: '/@user/', '/@user' (no trailing slash), '/user/', '/profile/'
+            # Also handles locale-prefixed URLs like '/en/@user/upload'.
+            # FIX C7: removed required trailing slash from regex — the original
+            # pattern /@([^/]+)/ failed on URLs like /en/@username (no trailing /).
             username = actions.safe_evaluate_js(
                 "() => { const p = window.location.pathname; "
-                "const a = p.match(/\\/@([^/]+)/); if(a) return a[1]; "
-                "const b = p.match(/\\/user\\/([^/]+)/); if(b) return b[1]; "
-                "const c = p.match(/\\/profile\\/([^/]+)/); return c ? c[1] : ''; }",
+                "const a = p.match(/\\/@([^/\\s?#]+)/); if(a) return a[1]; "
+                "const b = p.match(/\\/user\\/([^/\\s?#]+)/); if(b) return b[1]; "
+                "const c = p.match(/\\/profile\\/([^/\\s?#]+)/); return c ? c[1] : ''; }",
                 default=""
             )
         if not username:

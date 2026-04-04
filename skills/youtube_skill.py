@@ -136,13 +136,26 @@ _JS_SEEK_RELATIVE = """
 
 _JS_IS_LIKED = """
 () => {
-  // Check aria-pressed on the like button
-  const btn = document.querySelector('ytd-like-button-renderer button[aria-pressed]')
-           || document.querySelector('#top-level-buttons-computed button[aria-pressed]');
-  if (btn) return btn.getAttribute('aria-pressed') === 'true';
-  // null = button not found on this page (e.g. channel page, search page).
-  // false = button found but aria-pressed='false'.
-  // Callers must handle null as "unknown", not as "not liked".
+  // Multi-strategy, locale-independent like-state detection.
+  // Priority: modern Lit web component -> legacy Polymer -> aria-label fallback.
+  // Modern YouTube (2024+) uses <like-button-view-model> (Lit element).
+  const btn = document.querySelector('like-button-view-model button[aria-pressed]')
+           || document.querySelector('like-button-view-model button')
+           || document.querySelector('#like-button button[aria-pressed]')
+           || document.querySelector('#like-button button')
+           || document.querySelector('ytd-like-button-renderer button[aria-pressed]')
+           || document.querySelector('#top-level-buttons-computed ytd-like-button-renderer button')
+           || document.querySelector('ytd-segmented-like-dislike-button-renderer ytd-like-button-renderer button')
+           || document.querySelector("button[aria-label*='Like' i]:not([aria-label*='dislike' i])");
+  if (!btn) return null;
+  // Primary: aria-pressed attribute (spec-compliant, locale-independent)
+  const pressed = btn.getAttribute('aria-pressed');
+  if (pressed === 'true')  return true;
+  if (pressed === 'false') return false;
+  // Fallback: aria-label text contains 'unlike' = currently liked
+  const label = (btn.getAttribute('aria-label') || '').toLowerCase();
+  if (label.includes('unlike') || label.includes('entfernen') || label.includes('retirer')) return true;
+  if (label.includes('like') && !label.includes('unlike')) return false;
   return null;
 }
 """
@@ -594,7 +607,10 @@ class YouTubeSkill(BaseSkill):
                 detected_type = _classify_url(url)
                 try:
                     new_page = actions.open_new_tab(url)
-                    new_actions = Actions(new_page)
+                    # Share the interrupt handler so cookie/consent dialogs are
+                    # already cached from the search-results page scan — avoids
+                    # a cold full-scan on every background tab.
+                    new_actions = Actions(new_page, interrupt_handler=actions._interrupts)
                     if detected_type == "shorts":
                         self._wait_for_shorts_player(new_actions, i + 1)
                     else:
@@ -627,12 +643,11 @@ class YouTubeSkill(BaseSkill):
         """Like the current video or short. Idempotent — skips if already liked."""
         logger.info(f"[{self.name}] like()")
         try:
-            # Scroll down slightly so the video metadata section (which contains
-            # the like button) is rendered into the DOM.  On fresh page loads
-            # YouTube lazy-renders below-the-fold content; without a scroll the
-            # like button wait_for times out even though the video is playing.
+            # Scroll down to ensure the video metadata section (like button)
+            # is rendered into the DOM. YouTube lazy-renders below-fold content.
+            # 500px covers the player height on most screen resolutions.
             try:
-                actions.scroll("down", 300)
+                actions.scroll("down", 500)
             except Exception:
                 pass
 
@@ -645,8 +660,13 @@ class YouTubeSkill(BaseSkill):
             # or behind a shadow DOM layer that fools CSS wait_for).
             _JS_CLICK_LIKE_BUTTON = """
             () => {
-              // Try all known like-button container selectors in priority order
+              // Multi-strategy like-button click.
+              // Tries modern <like-button-view-model> FIRST, then legacy Polymer selectors.
+              // Uses JS el.click() so React/Lit synthetic events are properly fired.
               const candidates = [
+                document.querySelector('like-button-view-model button[aria-pressed]'),
+                document.querySelector('like-button-view-model button'),
+                document.querySelector('#like-button button'),
                 document.querySelector('ytd-like-button-renderer button[aria-pressed]'),
                 document.querySelector('ytd-like-button-renderer button[aria-label]'),
                 document.querySelector('#top-level-buttons-computed ytd-like-button-renderer button'),
@@ -657,6 +677,9 @@ class YouTubeSkill(BaseSkill):
               const btn = candidates.find(b => b && b.getBoundingClientRect().width > 0);
               if (!btn) return null;
               btn.scrollIntoView({behavior: 'instant', block: 'center'});
+              // Dispatch hover events first (some Lit/React components need it)
+              btn.dispatchEvent(new MouseEvent('mouseover', {bubbles: true, cancelable: true}));
+              btn.dispatchEvent(new MouseEvent('mouseenter', {bubbles: true, cancelable: true}));
               btn.click();
               return btn.getAttribute('aria-pressed');
             }
@@ -723,10 +746,21 @@ class YouTubeSkill(BaseSkill):
             actions.click(selectors=self._selectors["subscribe_button"])
 
             is_subbed_after = actions.safe_evaluate_js(_JS_IS_SUBSCRIBED, default=None)
-            if is_subbed_after:
+            if is_subbed_after is True:
                 logger.info(f"[{self.name}] subscribe() ✅")
                 return Result.ok(data={"subscribed": True, "action": "subscribed"})
-            logger.warning(f"[{self.name}] subscribe(): could not verify — treating as success")
+            # Could not verify from JS — check visible indicator as fallback
+            indicator_visible = False
+            try:
+                indicator_visible = actions._page.is_visible(
+                    self._selectors["subscribed_indicator"][0]
+                )
+            except Exception:
+                pass
+            if indicator_visible:
+                logger.info(f"[{self.name}] subscribe() ✅ (verified via indicator)")
+                return Result.ok(data={"subscribed": True, "action": "subscribed"})
+            logger.warning(f"[{self.name}] subscribe(): click fired but state unconfirmed")
             return Result.ok(data={"subscribed": True, "action": "subscribed_unverified"})
         except ActionError as e:
             return Result.fail(error=f"subscribe(): {e}")
@@ -771,6 +805,12 @@ class YouTubeSkill(BaseSkill):
         """Add current video to Watch Later playlist. Idempotent."""
         logger.info(f"[{self.name}] save_to_watch_later()")
         try:
+            # Scroll to render the metadata bar (where the save button lives).
+            # Same pre-condition as like() — YouTube lazy-renders below-fold UI.
+            try:
+                actions.scroll("down", 500)
+            except Exception:
+                pass
             return self._toggle_watch_later(actions, should_be_saved=True)
         except ActionError as e:
             return Result.fail(error=f"save_to_watch_later(): {e}")
@@ -1311,7 +1351,7 @@ class YouTubeSkill(BaseSkill):
             if mode == "shorts":
                 return Result.fail(error="open_comments(): comments not available in Shorts mode")
 
-            # Scroll comments section into view via JS
+            # Step 1: scroll the #comments element into view.
             found = actions.evaluate_js(
                 "() => {"
                 "  const c = document.querySelector('#comments')"
@@ -1324,16 +1364,22 @@ class YouTubeSkill(BaseSkill):
 
             if found is False:
                 # JS explicitly returned false: element does not exist in DOM.
-                # None means JS evaluation returned undefined/null (e.g. mock) —
-                # treat as "try anyway" rather than hard fail.
                 return Result.fail(
                     error="open_comments(): #comments element not found — "
                           "comments may be disabled or page not fully loaded"
                 )
 
+            # Step 2: do incremental window scrolls to trigger YouTube's
+            # IntersectionObserver that lazy-loads comment threads.
+            # A single scrollIntoView does NOT trigger the observer reliably.
+            import time as _time
+            for _ in range(4):
+                actions.scroll("down", 350)
+                _time.sleep(0.35)
+
             # Wait for comment threads to actually render
             try:
-                actions.wait_for(selectors=self._selectors["comments_section"], timeout=10.0)
+                actions.wait_for(selectors=self._selectors["comments_section"], timeout=12.0)
             except ActionError:
                 # Comments element exists but threads are slow / disabled
                 return Result.fail(
@@ -1379,6 +1425,15 @@ class YouTubeSkill(BaseSkill):
                 href = links[0]
                 url = href if href.startswith("http") else f"https://www.youtube.com{href}"
                 actions.navigate(url)
+                # Wait for the video player to confirm we landed on a watch page.
+                # Non-fatal: title element is acceptable when play button hasn't appeared yet.
+                try:
+                    actions.wait_for(
+                        selectors=self._selectors["play_button"] + self._selectors["video_title"] + ["video"],
+                        timeout=12.0,
+                    )
+                except ActionError:
+                    pass  # Page may still be loading; proceed with URL check
                 final_url = actions._page.url  # noqa: SLF001
                 logger.info(f"[{self.name}] next_video() ✅ via sidebar url={final_url}")
                 return Result.ok(data={"url": final_url, "method": "sidebar"})
