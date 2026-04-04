@@ -365,7 +365,10 @@ class Verifier:
             expected=expected_url,
             actual=current_url,
             passed=passed,
-            transient=not passed,   # Phase B: failure is transient; redirect may still be completing
+            # FIX m2: a URL mismatch is a hard fail — not transient.
+            # The browser IS on the wrong URL; retrying 3 times changes nothing.
+            # Only mark transient if the actual URL is still loading (about:blank).
+            transient=not passed and current_url in ("about:blank", "", "chrome://newtab/"),
             note="" if passed else f"URL '{current_url}' ≠ '{expected_url}'.",
         )
 

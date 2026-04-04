@@ -316,27 +316,43 @@ _JS_EXTRACT_MODEL_CARDS = r"""
 
 _JS_OPEN_DOWNLOAD_MENU = r"""
 () => {
-    // Strategy 1: icon-box element in the expected Y range
+    // Strategy 1: explicit download-related aria-labels (most robust).
+    // MakerWorld uses aria-label on its icon buttons; this is locale-independent.
+    for (const lbl of ['download', 'herunterladen', 'télécharger', '下载']) {
+        const btn = document.querySelector(
+            `button[aria-label*="${lbl}" i], [role='button'][aria-label*="${lbl}" i]`
+        );
+        if (btn) {
+            const r = btn.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) { btn.click(); return 'aria-label'; }
+        }
+    }
+    // Strategy 2: icon-box class that is VISIBLE on screen (no hardcoded Y range).
+    // Searches all icon-box elements, selects the RIGHTMOST one in the action bar
+    // (download is always the rightmost action icon on MakerWorld model pages).
+    const iconBoxes = [];
     for (const el of document.querySelectorAll('*')) {
         const cls = (el.className || '').toString();
         if (!cls.includes('icon-box')) continue;
         const rect = el.getBoundingClientRect();
         if (rect.width < 1 || rect.height < 1) continue;
-        if (rect.y < 250 || rect.y > 480) continue;
-        el.click();
-        return 'icon-box';
+        iconBoxes.push({el, rect});
     }
-    // Strategy 2: smallest button in the action bar area
-    const btns = Array.from(document.querySelectorAll('button'))
-        .filter(b => {
-            const r = b.getBoundingClientRect();
-            return r.y > 250 && r.y < 480 && r.x > 800 && r.width > 0;
-        });
-    if (btns.length >= 2) {
-        btns.sort((a, b) =>
-            a.getBoundingClientRect().width - b.getBoundingClientRect().width);
-        btns[0].click();
-        return 'smallest-button';
+    if (iconBoxes.length > 0) {
+        // Sort by X descending — rightmost icon in the row is the download button.
+        iconBoxes.sort((a, b) => b.rect.x - a.rect.x);
+        iconBoxes[0].el.click();
+        return 'icon-box-rightmost';
+    }
+    // Strategy 3: look for a button that contains an SVG and has a tooltip/title
+    // containing a download-related word — avoids positional pixel heuristics.
+    for (const btn of document.querySelectorAll('button')) {
+        const title = (btn.getAttribute('title') || btn.getAttribute('data-tooltip') || '').toLowerCase();
+        if (!title) continue;
+        if (/download|herunterladen|t.l.charger/.test(title)) {
+            const r = btn.getBoundingClientRect();
+            if (r.width > 0) { btn.click(); return 'title-attr'; }
+        }
     }
     return null;
 }
@@ -694,18 +710,22 @@ class MakerWorldSkill(BaseSkill):
             actions.safe_evaluate_js(
                 "() => document.body.click()", default=None
             )
-            time.sleep(0.2)
             clicked = actions.safe_evaluate_js(_JS_CLICK_COLLECT, default=None)
             if not clicked:
                 return Result.fail(
                     error="get_collections(): collection button not found"
                 )
-            time.sleep(1.5)
+            # Wait reactively for the MUI dialog to open instead of sleeping.
+            try:
+                actions.wait_for(
+                    selectors=self._selectors["dialog_root"], timeout=5.0
+                )
+            except ActionError:
+                pass  # dialog may not appear (no collections); continue
             raw = actions.safe_evaluate_js(_JS_GET_COLLECTIONS, default="[]")
             names = json.loads(raw or "[]")
             # Always close the dialog
             actions.safe_evaluate_js(_JS_CLOSE_DIALOG, default=None)
-            time.sleep(0.4)
             return Result.ok(data={"collections": names, "count": len(names)})
         except Exception as e:
             return Result.fail(
@@ -735,13 +755,21 @@ class MakerWorldSkill(BaseSkill):
             actions.safe_evaluate_js(
                 "() => document.body.click()", default=None
             )
-            time.sleep(0.2)
             clicked = actions.safe_evaluate_js(_JS_CLICK_COLLECT, default=None)
             if not clicked:
                 return Result.fail(
                     error="collect(): collection button not found"
                 )
-            time.sleep(1.5)
+
+            # Wait reactively for the MUI dialog instead of sleeping 1.5s.
+            dialog_visible = False
+            try:
+                actions.wait_for(
+                    selectors=self._selectors["dialog_root"], timeout=5.0
+                )
+                dialog_visible = True
+            except ActionError:
+                pass  # No dialog — item added directly (single-collection accounts)
 
             # Check if dialog appeared at all
             _JS_HAS_DIALOG = """
@@ -752,7 +780,7 @@ class MakerWorldSkill(BaseSkill):
                 return false;
             }
             """
-            dialog_present = actions.safe_evaluate_js(
+            dialog_present = dialog_visible or actions.safe_evaluate_js(
                 _JS_HAS_DIALOG, default=False
             )
             if not dialog_present:
@@ -803,10 +831,8 @@ class MakerWorldSkill(BaseSkill):
                         error=f"collect(): collection '{collection_name}' not found"
                     )
                 logger.info("[%s] collect: %r", self.name, res)
-                time.sleep(0.4)
 
             confirmed = actions.safe_evaluate_js(_JS_CONFIRM_DIALOG, default=None)
-            time.sleep(0.5)
             return Result.ok(
                 data={
                     "collected": True,
@@ -830,13 +856,18 @@ class MakerWorldSkill(BaseSkill):
             actions.safe_evaluate_js(
                 "() => document.body.click()", default=None
             )
-            time.sleep(0.2)
             clicked = actions.safe_evaluate_js(_JS_CLICK_COLLECT, default=None)
             if not clicked:
                 return Result.fail(
                     error="uncollect(): collection button not found"
                 )
-            time.sleep(1.5)
+            # Reactive wait for dialog instead of sleep
+            try:
+                actions.wait_for(
+                    selectors=self._selectors["dialog_root"], timeout=5.0
+                )
+            except ActionError:
+                pass  # no dialog opened
 
             target = (collection_name or "").lower()
             _JS_UNCHECK = f"""
@@ -909,9 +940,7 @@ class MakerWorldSkill(BaseSkill):
                 )
 
             logger.info("[%s] uncollect: unchecked '%s'", self.name, toggled)
-            time.sleep(0.4)
             confirmed = actions.safe_evaluate_js(_JS_CONFIRM_DIALOG, default=None)
-            time.sleep(0.5)
             return Result.ok(
                 data={
                     "uncollected": True,
@@ -944,7 +973,16 @@ class MakerWorldSkill(BaseSkill):
                 return Result.fail(
                     error="download(): could not open download dropdown"
                 )
-            time.sleep(0.8)
+            # Reactively wait for the MUI Popper/Menu to appear instead of sleeping.
+            _DROPDOWN_SELECTORS = [
+                "[class*='MuiPopper-root']",
+                "[class*='MuiMenu-root']",
+                "[class*='MuiPopover-root']",
+            ]
+            try:
+                actions.wait_for(selectors=_DROPDOWN_SELECTORS, timeout=4.0)
+            except ActionError:
+                pass  # dropdown may have appeared but with a different class
 
             kw_map: dict[str, list[str]] = {
                 "3mf":   ["3mf herunterladen", "download 3mf", "3mf"],
@@ -983,7 +1021,6 @@ class MakerWorldSkill(BaseSkill):
                 return Result.fail(
                     error=f"download(): format '{format}' not found in dropdown"
                 )
-            time.sleep(1.5)
             logger.info(
                 "[%s] download('%s') via '%s' OK",
                 self.name, format, clicked_item,
@@ -1034,12 +1071,13 @@ class MakerWorldSkill(BaseSkill):
         """Navigate to user's liked models page and scrape model cards."""
         logger.info("[%s] get_my_likes(username='%s')", self.name, username)
         if not username:
-            # Auto-detect from current URL (handles '/@user/', '/user/', '/profile/')
+            # Auto-detect from current URL — same fix as get_my_uploads.
+            # Handles '/@user' (no trailing slash), '/en/@user/likes', etc.
             username = actions.safe_evaluate_js(
                 "() => { const p = window.location.pathname; "
-                "const a = p.match(/\\/@([^/]+)/); if(a) return a[1]; "
-                "const b = p.match(/\\/user\\/([^/]+)/); if(b) return b[1]; "
-                "const c = p.match(/\\/profile\\/([^/]+)/); return c ? c[1] : ''; }",
+                "const a = p.match(/\\/@([^/\\s?#]+)/); if(a) return a[1]; "
+                "const b = p.match(/\\/user\\/([^/\\s?#]+)/); if(b) return b[1]; "
+                "const c = p.match(/\\/profile\\/([^/\\s?#]+)/); return c ? c[1] : ''; }",
                 default=""
             )
         if not username:

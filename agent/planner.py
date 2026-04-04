@@ -1004,6 +1004,14 @@ _VALID_ACTIONS: frozenset[str] = frozenset({
     "download_3mf",
     "download_stl",
     "navigate_to_model",
+    "navigate_to",          # MakerWorldSkill direct navigate action
+    "open_top_model",       # MakerWorldSkill open_top_results alias
+    "get_my_uploads",       # MakerWorld profile actions
+    "get_my_likes",
+    "get_collections",
+    "get_model_performance",
+    "get_popular_searches",
+    "compare_models",
     # MakerWorld — LLM-facing aliases (Phase E)
     "mw_search",            # alias: search (routed to MakerWorldSkill by URL)
     "mw_open_top",          # alias: open_top_results
