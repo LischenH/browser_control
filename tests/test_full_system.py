@@ -60,6 +60,18 @@ logging.basicConfig(
 _log = logging.getLogger("e2e_test")
 _log.setLevel(logging.DEBUG)
 
+# ─── Pass sentinel ──────────────────────────────────────────────────────────
+# step() returns None on FAIL and _PASS on PASS-with-no-data (e.g. navigate()).
+# Callers use `skip_if=prev_step is None` — which correctly stays False for _PASS.
+_PASS = object()
+
+# ─── Pass sentinel ───────────────────────────────────────────────────────────
+# CRITICAL FIX: step() must return a non-None sentinel on PASS when fn() returns
+# None (e.g. actions.navigate()). Without this, every `skip_if=nav is None` fires
+# even when navigation succeeded, cascading into all downstream steps being skipped.
+# _PASS is a unique object: `_PASS is not None` is True, `bool(_PASS)` is True.
+_PASS = object()
+
 # ─── ANSI colours ────────────────────────────────────────────────────────────
 _GREEN  = "\033[92m"
 _RED    = "\033[91m"
@@ -172,7 +184,12 @@ def step(
             )
 
         print(f"{tag} {msg}")
-        return result if ok else None
+        # On PASS: return the real result when it is not None, or _PASS sentinel
+        # when fn() returned None (e.g. navigate(), scroll()). This lets callers
+        # distinguish "step passed" from "step failed" via `result is None`.
+        if ok:
+            return result if result is not None else _PASS
+        return None
 
     except Exception as exc:
         elapsed = (time.perf_counter() - t0) * 1000
@@ -268,7 +285,12 @@ def run_youtube_suite(conn, sm, tm) -> SuiteResult:
     actions = Actions(conn.active_page)
 
     # ── 1. Navigate to YouTube ────────────────────────────────────────────────
-    nav_ok = step("navigate to YouTube", lambda: actions.navigate("https://www.youtube.com"))
+    nav_ok = step(
+        "navigate to YouTube",
+        lambda: actions.navigate("https://www.youtube.com"),
+        validate=lambda r: ("youtube.com" in conn.active_page.url,
+                            conn.active_page.url[:80]),
+    )
 
     # ── 2. Search ─────────────────────────────────────────────────────────────
     search_result = step(
