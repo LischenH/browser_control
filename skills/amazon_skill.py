@@ -479,7 +479,8 @@ class AmazonSkill(BaseSkill):
     def _action_remove_from_cart(self, actions: Actions) -> Result:
         """
         Remove the first item from the cart.
-        Must be on the cart page.
+        Must be on the cart page. Uses a JS fallback for Amazon.de which uses
+        different button structures than Amazon.com.
         """
         logger.info(f"[{self.name}] remove_from_cart()")
         try:
@@ -494,10 +495,58 @@ class AmazonSkill(BaseSkill):
                     timeout=10.0
                 )
 
-            actions.wait_for(
-                selectors=self._selectors["remove_from_cart_button"], timeout=10.0
-            )
-            actions.click(selectors=self._selectors["remove_from_cart_button"])
+            # Try CSS selectors first
+            css_ok = False
+            try:
+                actions.wait_for(
+                    selectors=self._selectors["remove_from_cart_button"], timeout=5.0
+                )
+                actions.click(selectors=self._selectors["remove_from_cart_button"])
+                css_ok = True
+            except ActionError:
+                pass
+
+            if not css_ok:
+                # JS fallback: find any delete/remove button by text content
+                # Works on Amazon.de (“Löschen”) and other locales
+                _JS_CLICK_DELETE = r"""
+                () => {
+                    // Try data-action first (locale-neutral)
+                    const byAction = document.querySelector(
+                        '[data-action="delete"], [data-action="remove"], '
+                        + '[name*="delete"], [name*="remove"]'
+                    );
+                    if (byAction) { byAction.click(); return 'data-action'; }
+                    // Try buttons/inputs whose value/text contains delete words
+                    const deleteWords = [
+                        'delete','remove','l\u00f6schen','entfernen',
+                        'supprimer','eliminar'
+                    ];
+                    for (const el of document.querySelectorAll(
+                        'input[type="submit"], button, a'
+                    )) {
+                        const text = (
+                            el.value || el.innerText || el.getAttribute('aria-label') || ''
+                        ).toLowerCase().trim();
+                        if (deleteWords.some(w => text.includes(w))) {
+                            const rect = el.getBoundingClientRect();
+                            if (rect.width > 0 && rect.height > 0) {
+                                el.click();
+                                return 'text:' + text.slice(0, 30);
+                            }
+                        }
+                    }
+                    return null;
+                }
+                """
+                js_result = actions.safe_evaluate_js(_JS_CLICK_DELETE, default=None)
+                if not js_result:
+                    return Result.fail(
+                        error="remove_from_cart(): no delete button found on cart page "
+                              "(tried CSS selectors and JS fallback)"
+                    )
+                logger.info(f"[{self.name}] remove_from_cart() via JS: {js_result}")
+
             logger.info(f"[{self.name}] remove_from_cart() ✅")
             return Result.ok(data={"removed": True})
         except ActionError as e:

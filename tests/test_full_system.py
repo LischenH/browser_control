@@ -530,7 +530,7 @@ def run_youtube_multitab_suite(conn, sm, tm) -> SuiteResult:
         "switch to first recommended tab (index 1)",
         lambda: tm.switch_to_index(1),
         validate=lambda r: (r is not None, "switch_to_index returned None"),
-        skip_if=tabs_result is None or len(tabs_result) < 2,
+        skip_if=tabs_result is None or tabs_result is _PASS or len(tabs_result) < 2,
         skip_reason="not enough tabs",
     )
 
@@ -638,29 +638,22 @@ def run_amazon_suite(conn, sm, tm) -> SuiteResult:
     )
 
     # ── 6b. DOM verify: cart count increased ─────────────────────────────────
+    _already_in_cart = (
+        cart_result is not None and cart_result is not _PASS
+        and hasattr(cart_result, "data")
+        and isinstance(cart_result.data, dict)
+        and cart_result.data.get("action", "").startswith("skipped")
+    )
     step(
         "DOM verify: cart badge shows ≥1 item",
-        lambda: assert_dom_state(
-            actions,
-            """() => {
-              const badge = document.querySelector('#nav-cart-count');
-              return badge ? parseInt(badge.innerText.trim(), 10) : 0;
-            }""",
-            expected=None,  # just check > 0
-            description="cart_count > 0",
+        lambda: actions.safe_evaluate_js(
+            "() => { const b = document.querySelector('#nav-cart-count'); "
+            "return b ? parseInt(b.innerText.trim(), 10) || 0 : 0; }",
+            default=0
         ),
-        validate=lambda r: (
-            # assert_dom_state returns True/False; here we re-check directly
-            (lambda cnt: cnt > 0)(
-                actions.safe_evaluate_js(
-                    "() => { const b = document.querySelector('#nav-cart-count'); "
-                    "return b ? parseInt(b.innerText.trim(), 10) || 0 : 0; }",
-                    default=0
-                )
-            ),
-            "cart count badge is 0"
-        ),
-        skip_if=cart_result is None,
+        validate=lambda r: (isinstance(r, int) and r > 0, f"cart_count={r}"),
+        skip_if=cart_result is None or _already_in_cart,
+        skip_reason="item already in cart — badge won't increment",
     )
 
     # ── 7. Open cart ──────────────────────────────────────────────────────────

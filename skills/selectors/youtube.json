@@ -121,7 +121,14 @@
     "ytd-menu-renderer ytd-button-renderer:last-of-type button",
     "button[aria-label='Save to playlist']",
     "button[aria-label='Speichern']",
-    "button[aria-label='Enregistrer']"
+    "button[aria-label='Enregistrer']",
+    "button[aria-label*='playlist' i]",
+    "button[aria-label*='Wiedergabeliste' i]",
+    "button[aria-label*='speichern' i]",
+    "button[aria-label*='liste de lecture' i]",
+    "button[aria-label*='lista de reproducci' i]",
+    "#actions button[aria-label*='save' i]",
+    "#actions button[aria-label*='list' i]"
   ],
   "_comment_save_button": "Priority: stable class/ID first (locale-independent), structural fallback, locale-specific aria-labels LAST. YtSaveButtonPlaceholderHost is YouTube's Polymer component class — stable across locales.",
   "watch_later_item": [

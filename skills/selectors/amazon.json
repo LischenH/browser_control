@@ -56,7 +56,15 @@
     "input[data-action='delete']",
     ".sc-action-delete input",
     "a[data-action='delete']",
-    ".sc-action-delete [data-action='delete']"
+    ".sc-action-delete [data-action='delete']",
+    "input[name^='submit.delete']",
+    "input[name^='submit.remove']",
+    "a[id^='remove']",
+    "span.sc-action-delete a",
+    "[data-feature-id='delete'] input",
+    "[data-feature-id='delete'] button",
+    "form[data-feature-id='cart-delete-form'] button",
+    "form[data-feature-id='cart-delete-form'] input[type='submit']"
   ],
   "wishlist_button": [
     "#add-to-wishlist-button-submit",
